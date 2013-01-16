@@ -137,6 +137,5 @@ class user:
             self.downloads = info['downloads']
             self.uploads = info['uploads']
         except KeyError, IndexError:
-            print "Error: updateFromUserInfo"
             return 0
         return 1

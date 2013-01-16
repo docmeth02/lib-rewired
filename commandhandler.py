@@ -1,6 +1,5 @@
 import types
 import logging
-from pprint import pprint
 
 
 class Handler():
@@ -79,7 +78,7 @@ class Handler():
         except KeyError:
             self.logger.debug("Invalid field count for 341 Chat Topic")
             return 0
-        print "Topic for chat " + str(values[0]) + ": " + str(values[5])
+        self.logger.debug("Topic for chat " + str(values[0]) + ": " + str(values[5]))
         return 1
 
     def clientJoin(self, values):
@@ -127,13 +126,12 @@ class Handler():
             return 1
         # client left a private chat
         if not int(values[0]) in self.parent.userlist[int(values[1])].chats:
-            print "MARK"
             return 0  # this user never was active in this chat
         self.parent.userlist[int(values[1])].chats.remove(int(values[0]))
         self.logger.debug("User %s left chat %s", values[1], values[0])
         # check if we are the only one left in the private cheat
         if not self.parent.getChatUsers(values[0]):
-            print "Chat %s is empty... leaving"
+            self.logger.debug("Chat %s is empty... leaving")
             self.parent.leaveChat(values[0])
         return 1
 

@@ -124,7 +124,6 @@ def makeconn(host, port):
     for r in pysocket.getaddrinfo(host, port,
                                 0, pysocket.SOCK_STREAM):
         af, st, pr, _, sa = r
-        print sa
         s = pysocket.socket(af, st, pr)
         try:
             s.connect(sa)

@@ -60,7 +60,6 @@ class client(threading.Thread):
                                 self.subscriptions[amsg.type](amsg)  # call callback
                             except '' as e:
                                 self.logger.debug("callback for %s failed!", amsg.type)
-                                print e
                             self.updateQueue(id)
                             break
                         elif self.wiredmessages.askhandle(amsg.type):
@@ -135,7 +134,7 @@ class client(threading.Thread):
         self.connected = 0
         return 1
 
-    def login(self, nick, user, passw, clearPass = 0):
+    def login(self, nick, user, passw, clearPass=0):
         self.nick = nick
         self.username = user
         self.password = passw
@@ -293,7 +292,6 @@ class client(threading.Thread):
             self.logger.error("Invalid private chat id in startPrivateChat")
             return 0
         self.activeChats.append(chatid)
-        print self.activeChats
         self.getUserList(chatid)
         return chatid
 
@@ -383,15 +381,13 @@ class client(threading.Thread):
     def getUserNameByID(self, id):
         id = int(id)
         if not id in self.userlist:
-            print "FAIL"
             return 0
         user = self.userlist[id].login
         return user
 
-    def getNickByID(self,id):
+    def getNickByID(self, id):
         id = int(id)
         if not id in self.userlist:
-            print "FAIL2"
             return 0
         nick = self.userlist[id].nick
         return nick
