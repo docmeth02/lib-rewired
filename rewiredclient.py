@@ -202,12 +202,15 @@ class client(threading.Thread):
         return 1
 
     def updateQueue(self, id):
-        self.socketthread.lock.acquire()
+        alreadyLocked = 0
+        if not self.socketthread.lock.acquire(False):
+            alreadyLocked = 1
         self.socketthread.queue.pop(id)
         if not len(self.socketthread.queue):  # queue is empty
             self.socketthread.event.clear()
             self.logger.debug("Empty Queue")
-        self.socketthread.lock.release()
+        if not alreadyLocked:
+            self.socketthread.lock.release()
         return 1
 
     def getMsg(self, type, timeout=5):
@@ -231,15 +234,18 @@ class client(threading.Thread):
         group = {}
         count = 0
         while float(count) <= float(timeout):
-            event = self.socketthread.event.wait(0)
+            event = self.socketthread.event.wait()
             if event:
+                self.socketthread.lock.acquire()
                 for id, amsg in self.socketthread.queue.items():
                     if amsg.type == msgtype:
                         self.updateQueue(id)
                         group[int(amsg.id)] = amsg
                     elif amsg.type == endtype:
                         self.updateQueue(id)
+                        self.socketthread.lock.release()
                         return group
+                self.socketthread.lock.release()
             sleep(0.1)
             count += 0.1
         self.logger.debug("EXITING Without Group Termination EVENT")
@@ -352,6 +358,7 @@ class client(threading.Thread):
             if int(chatid) == 1:  # public chat adds users to the global userlist
                 auser = types.user()
                 auser.initFromDict(amsg.msg)
+                self.logger.debug("Found User: " + str(auser.nick) + " id:" + str(auser.userid))
                 self.userlist[auser.userid] = auser
             else:
                 userid = int(amsg.msg[1])
