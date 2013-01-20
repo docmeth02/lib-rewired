@@ -273,7 +273,7 @@ class client(threading.Thread):
         command = "SAY "
         if action:
             command = "ME "
-        if not self.socketthread.send(command + str(chatid) + chr(28) + text):
+        if not self.socketthread.send(command + str(chatid) + chr(28) + str(text)):
             return 0
         return 1
 
