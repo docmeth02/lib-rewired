@@ -42,7 +42,7 @@ class wiredMessages:
         501: True,
         502: True,
         503: True,
-        510: True,
+        510: False,  # Login Failed
         511: True,
         512: True,
         513: True,

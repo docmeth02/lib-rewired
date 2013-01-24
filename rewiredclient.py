@@ -149,9 +149,11 @@ class client(threading.Thread):
             self.socketthread.send("ICON 0" + chr(28) + self.icon)
         self.socketthread.send("USER " + self.username)
         self.socketthread.send("PASS " + self.password)
-        login = self.getMsg(201)
+        login = self.getMsg(201, 2)
         if not login:
-            self.logger.debug("login failed!")
+            fail = self.getMsg(510, 1)
+            if fail:
+                self.logger.debug("Server returned 510 upon login")
             return 0
         self.id = int(login.msg[0])
         self.logger.debug("Login successful. User ID: %s", self.id)
