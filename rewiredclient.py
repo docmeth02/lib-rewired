@@ -57,7 +57,10 @@ class client(threading.Thread):
                     for id, amsg in self.socketthread.queue.items():
                         if amsg.type in self.subscriptions:
                             try:
-                                self.subscriptions[amsg.type](amsg)  # call callback
+                                for asubscriber in self.subscriptions[int(amsg.type)]:
+                                    #print self.subscriptions[int(amsg.type)]
+                                    #print asubscriber
+                                    asubscriber(amsg)  # call callback
                             except '' as e:
                                 self.logger.debug("callback for %s failed!", amsg.type)
                             self.updateQueue(id)
@@ -90,7 +93,10 @@ class client(threading.Thread):
         raise SystemExit
 
     def subscribe(self, id, callback):
-        self.subscriptions[int(id)] = callback
+        if id in self.subscriptions:
+            self.subscriptions[int(id)].append(callback)
+            return 1
+        self.subscriptions[int(id)] = [callback]
         return 1
 
     def notify(self, event, callback):
