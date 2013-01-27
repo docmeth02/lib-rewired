@@ -58,8 +58,6 @@ class client(threading.Thread):
                         if amsg.type in self.subscriptions:
                             try:
                                 for asubscriber in self.subscriptions[int(amsg.type)]:
-                                    #print self.subscriptions[int(amsg.type)]
-                                    #print asubscriber
                                     asubscriber(amsg)  # call callback
                             except '' as e:
                                 self.logger.debug("callback for %s failed!", amsg.type)

@@ -33,6 +33,11 @@ class Handler():
         elif type == 305:                       # Private Message recieved
             self.privateMessage(values)
             return 1
+        elif type == 306:                       # Client Kicked
+            self.clientKicked(values)
+        elif type == 307:                       # Client Banned
+            self.clientBanned(values)
+            return 1
         elif type == 331:                       # Private Chat Invitiation
             self.privateChatInvite(values)
             return 1
@@ -103,6 +108,34 @@ class Handler():
             except:
                 self.logger.debug("Error in callback for __ClientJoin")
                 return 0
+        return 1
+
+    def clientKicked(self, values):
+        if not len(values) == 3:
+            return 0
+        self.logger.debug("User %s kicked by %s", self.parent.getUserNameByID(values[0]), self.parent.getUserNameByID(values[1]))
+        if "__ClientKicked" in self.parent.notifications:
+            try:
+                for acallback in self.parent.notifications["__ClientKicked"]:
+                    acallback([int(values[1]), int(values[0]), str(values[2])])
+            except:
+                self.logger.debug("Error in callback for __ClientKicked")
+                pass
+        self.clientLeave([1, values[0]])
+        return 1
+
+    def clientBanned(self, values):
+        if not len(values) == 3:
+            return 0
+        self.logger.debug("User %s banned by %s", self.parent.getUserNameByID(values[0]), self.parent.getUserNameByID(values[1]))
+        if "__ClientBanned" in self.parent.notifications:
+            try:
+                for acallback in self.parent.notifications["__ClientBanned"]:
+                    acallback([int(values[1]), int(values[0]), str(values[2])])
+            except:
+                self.logger.debug("Error in callback for __ClientBanned")
+                pass
+        self.clientLeave([1, values[0]])
         return 1
 
     def clientLeave(self, values):

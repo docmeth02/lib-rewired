@@ -15,8 +15,8 @@ class wiredMessages:
         303: True,
         304: True,
         305: True,
-        306: True,
-        307: True,
+        306: True,   # Kick
+        307: True,   # Ban
         308: False,  # User Info
         309: True,
         310: False,  # userlist item
