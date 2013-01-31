@@ -43,7 +43,7 @@ class wiredMessages:
         502: True,
         503: True,
         510: False,  # Login Failed
-        511: True,
+        511: False,  # Banned
         512: True,
         513: True,
         514: True,

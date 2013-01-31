@@ -377,6 +377,8 @@ class client(threading.Thread):
                 self.icon = b64encode(iconFile.read())
         except:
             return 0
+        if self.loggedin:
+            self.socketthread.send("ICON 0" + chr(28) + self.icon)
         return 1
 
     def getUserByID(self, id):
@@ -474,3 +476,29 @@ class client(threading.Thread):
             transfers[index] = thistransfer
             index += 1
         return transfers
+
+    def kickUser(self, id, msg=""):
+        if not self.privileges['kickUsers']:
+            self.logger.info("kick: insufficient privileges")
+            return 0
+        if not int(id) in self.userlist:
+            self.logger.error("kick: invalid userid %s", id)
+            return 0
+        if not self.socketthread.send("KICK " + str(id) + chr(28) + str(msg)):
+            self.logger.error("Failed to kick user %s", id)
+            return 0
+        self.logger.debug("Kicked user %s", id)
+        return 1
+
+    def banUser(self, id, msg=""):
+        if not self.privileges['banUsers']:
+            self.logger.info("ban: insufficient privileges")
+            return 0
+        if not int(id) in self.userlist:
+            self.logger.error("ban: invalid userid %s", id)
+            return 0
+        if not self.socketthread.send("BAN " + str(id) + chr(28) + str(msg)):
+            self.logger.error("Failed to ban user %s", id)
+            return 0
+        self.logger.debug("Banned user %s", id)
+        return 1
