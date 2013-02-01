@@ -72,13 +72,14 @@ class client(threading.Thread):
                             sleep(0.1)
             else:  # socket is not connected
                 self.logger.debug("not connected")
+                if self.loggedin and not self.autoreconnect:
+                    self.keepalive = 0
+                    break
                 if self.autoreconnect:
                     if self.username and self.password != 0 and self.address\
                     and self.port and not self.socketthread.is_alive():
                         self.reconnect()
-                else:
-                    self.keepalive = 0
-            sleep(0.25)
+            sleep(0.1)
         self.logger.debug("Exit librewired")
         if self.socketthread.is_alive():
             try:
