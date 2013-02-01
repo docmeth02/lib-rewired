@@ -76,8 +76,10 @@ class client(threading.Thread):
                     if self.username and self.password != 0 and self.address\
                     and self.port and not self.socketthread.is_alive():
                         self.reconnect()
-            sleep(0.1)
-        self.logger.debug("EXIT")
+                else:
+                    self.keepalive = 0
+            sleep(0.25)
+        self.logger.debug("Exit librewired")
         if self.socketthread.is_alive():
             try:
                 self.socketthread.socket.shutdown(SHUT_RDWR)  # close socket to raise exception
