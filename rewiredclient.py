@@ -3,7 +3,6 @@ import types
 import commandhandler
 import threading
 from time import sleep
-from ssl import OPENSSL_VERSION
 from base64 import b64encode
 from socket import SHUT_RDWR
 from os import uname
@@ -11,6 +10,11 @@ from os import uname
 import platform
 from logging import getLogger
 import hashlib
+try:
+    # This will fail on python > 2.7
+    from ssl import OPENSSL_VERSION
+except:
+    pass
 
 
 class client(threading.Thread):
@@ -50,10 +54,9 @@ class client(threading.Thread):
     def run(self):
         while self.keepalive:
             if self.socketthread.connected:
-                event = self.socketthread.event.wait(0.1)
                 if not self.keepalive:
                     break
-                if event:
+                if self.socketthread.event.isSet():
                     for id, amsg in self.socketthread.queue.items():
                         if amsg.type in self.subscriptions:
                             try:
@@ -223,8 +226,7 @@ class client(threading.Thread):
         count = 0
         self.logger.debug("timeout is: %s", timeout)
         while float(count) <= float(timeout):
-            event = self.socketthread.event.wait(0)
-            if event:
+            if self.socketthread.event.isSet():
                 for id, amsg in self.socketthread.queue.items():
                     if amsg.type == type:
                         self.updateQueue(id)
@@ -240,8 +242,7 @@ class client(threading.Thread):
         group = {}
         count = 0
         while float(count) <= float(timeout):
-            event = self.socketthread.event.wait(0)
-            if event:
+            if self.socketthread.event.isSet():
                 msgs = self.socketthread.queue.items()
                 msgs.sort()  # Sort msgs by transaction id to prevent early termination msg mix-ups
                 for id, amsg in msgs:
