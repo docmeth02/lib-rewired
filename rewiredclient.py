@@ -6,6 +6,7 @@ from time import sleep
 from base64 import b64encode
 from socket import SHUT_RDWR
 from os import uname
+from random import uniform
 #from platform import platform
 import platform
 from logging import getLogger
@@ -78,10 +79,22 @@ class client(threading.Thread):
                 if self.loggedin and not self.autoreconnect:
                     self.keepalive = 0
                     break
-                if self.autoreconnect:
-                    if self.username and self.password != 0 and self.address\
-                    and self.port and not self.socketthread.is_alive():
-                        self.reconnect()
+
+                if self.loggedin and self.autoreconnect:
+                        self.loggedin = 0
+                        while  not self.loggedin and self.keepalive:
+                            self.logger.debug("Starting reconnect ...")
+                            self.reconnect()
+                            if self.loggedin:
+                                self.logger.debug("Reconnected successfully")
+                                break
+                            else:
+                                self.logger.debug("Reconnect failed")
+                            sleep(uniform(1, 20))
+
+                if not self.loggedin:
+                    sleep(0.5)
+
             sleep(0.1)
         self.logger.debug("Exit librewired")
         if self.socketthread.is_alive():
@@ -119,23 +132,21 @@ class client(threading.Thread):
         return 1
 
     def reconnect(self):
-        if self.pingtimer:
+        if self.pingtimer:  # cancel our running ping timer
             self.pingtimer.cancel()
             self.pingtimer.join()
-        self.socketthread = rewiredsocket.socket(self)
+        self.socketthread.join()  # destroy existing socket
+        self.socketthread = rewiredsocket.socket(self)  # create a new one
         self.socketthread.start()
-        while not self.socketthread.connected and self.keepalive:
-            if not self.connect(self.address, self.port):
-                sleep(2)
-                continue
-            if not self.keepalive:
+
+        if not self.connect(self.address, self.port):
+            return 0
+        if not self.keepalive:  # shutdown?
                 return 0
-            self.userlist = {}
-            self.topics = {}
-            if not self.login(self.nick, self.username, self.password):
-                self.logger.debug("reconnect login failed")
-            continue
-        self.logger.debug("reconnected")
+        self.userlist = {}
+        self.topics = {}
+        if not self.login(self.nick, self.username, self.password):
+            return 0
         return 1
 
     def disconnect(self):
