@@ -5,8 +5,8 @@ import threading
 from time import sleep
 from base64 import b64encode
 from socket import SHUT_RDWR
-from os import uname
 from random import uniform
+from os.path import exists
 #from platform import platform
 import platform
 from logging import getLogger
@@ -205,6 +205,7 @@ class client(threading.Thread):
             except:
                 pass
         else:
+            from os import uname
             sysuname = uname()
             try:
                 sysplatform['OS'] = sysuname[0]
@@ -388,8 +389,7 @@ class client(threading.Thread):
 
     def loadIcon(self, filename):
         try:
-            with open(filename, 'r') as iconFile:
-                self.icon = b64encode(iconFile.read())
+            self.icon = readIcon(filename)
         except:
             return 0
         if self.loggedin:
@@ -517,3 +517,16 @@ class client(threading.Thread):
             return 0
         self.logger.debug("Banned user %s", id)
         return 1
+
+
+def readIcon(filename):
+    icon = ''
+    if not exists(filename):
+        return 0
+    with open(filename, "rb") as f:
+        data = f.read(1)
+        while data:
+            icon += data
+            data = f.read(1024)
+    icon = b64encode(icon)
+    return icon

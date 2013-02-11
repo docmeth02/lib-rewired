@@ -15,7 +15,10 @@ class socket(threading.Thread):
         self.event = threading.Event()
         self.socket = pysocket.socket(pysocket.AF_INET, pysocket.SOCK_STREAM)
         if pysocket.has_ipv6:
-            self.socket = pysocket.socket(pysocket.AF_INET6, pysocket.SOCK_STREAM)
+            try:
+                self.socket = pysocket.socket(pysocket.AF_INET6, pysocket.SOCK_STREAM)
+            except:
+                pass
         self.queue = {}
         self.msgid = 0
         self.tlssocket = 0
