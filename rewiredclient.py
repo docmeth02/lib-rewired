@@ -307,20 +307,27 @@ class client(threading.Thread):
         if not self.connected or not self.loggedin:
             self.logger.debug("sendChatImage: not connected or logged in properly")
             return 0
-        if not 'type' in image or not 'data' in image:
-            self.logger.debug("sendChatImage: invalid image data")
         if not chatid in self.activeChats:
             self.logger.debug("sendChatImage: not in chat %s", chatid)
             return 0
         if chatid == 1:
             self.logger.debug("sendChatImage: Not allowed to send image to public chat")
             return 0
+        data = self.insertImageData(text, image)
+        if data:
+            if not self.socketthread.send("SAY " + str(chatid) + chr(28) + data):
+                self.logger.error("sendChatImage: Failed to send msg to server")
+                return 0
+            return 1
+        return 0
+
+    def insertImageData(self, text, image):
+        if not 'type' in image or not 'data' in image:
+            self.logger.debug("insertImageData: invalid image data")
+            return 0
         data = b64encode(image['data'])
         imagestring = chr(3) + "data:image/" + str(image['type'].lower()) + ";base64," + str(data) + chr(3)
-        if not self.socketthread.send("SAY " + str(chatid) + chr(28) + text.replace('%image%', imagestring)):
-            print "Nope"
-            return 0
-        return 1
+        return text.replace('%image%', imagestring)
 
     def startPrivateChat(self):
         if not self.connected or not self.loggedin:
@@ -384,6 +391,20 @@ class client(threading.Thread):
             return 0
         self.socketthread.send("MSG " + str(userid) + chr(28) + str(text))
         return 1
+
+    def sendPrivateMsgImage(self, userid, text, image):
+        # expects %image% inside of text and replaces every occurrence with ssWired formatted image data
+        # expects image to be type dict: {'type': 'png/jpg/gif', 'data': binaryimagedata }
+        if not self.connected or not self.loggedin:
+            self.logger.debug("sendChatImage: not connected or logged in properly")
+            return 0
+        data = self.insertImageData(text, image)
+        if data:
+            if not self.socketthread.send("MSG " + str(userid) + chr(28) + data):
+                self.logger.error("sendPrivateMsgImage: Failed to send msg to server")
+                return 0
+            return 1
+        return 0
 
     def getUserList(self, chatid):
         # gets the initial userlist for a chat
