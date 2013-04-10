@@ -82,7 +82,7 @@ class client(threading.Thread):
 
                 if self.loggedin and self.autoreconnect:
                         self.loggedin = 0
-                        while  not self.loggedin and self.keepalive:
+                        while not self.loggedin and self.keepalive:
                             self.logger.debug("Starting reconnect ...")
                             self.reconnect()
                             if self.loggedin:
@@ -214,7 +214,7 @@ class client(threading.Thread):
                 sysplatform['TLSLib'] = OPENSSL_VERSION
             except:
                 pass
-        return "%s/%s (%s; %s; %s) (%s)" % (self.appname, self.version, sysplatform['OS'],\
+        return "%s/%s (%s; %s; %s) (%s)" % (self.appname, self.version, sysplatform['OS'],
                                             sysplatform['OSVersion'], sysplatform['ARCH'], sysplatform['TLSLib'])
 
     def serverPing(self):
@@ -298,6 +298,27 @@ class client(threading.Thread):
         if action:
             command = "ME "
         if not self.socketthread.send(command + str(chatid) + chr(28) + text):
+            return 0
+        return 1
+
+    def sendChatImage(self, chatid, text, image):
+        # expects %image% inside of text and replaces every occurrence with ssWired formatted image data
+        # expects image to be type dict: {'type': 'png/jpg/gif', 'data': binaryimagedata }
+        if not self.connected or not self.loggedin:
+            self.logger.debug("sendChatImage: not connected or logged in properly")
+            return 0
+        if not 'type' in image or not 'data' in image:
+            self.logger.debug("sendChatImage: invalid image data")
+        if not chatid in self.activeChats:
+            self.logger.debug("sendChatImage: not in chat %s", chatid)
+            return 0
+        if chatid == 1:
+            self.logger.debug("sendChatImage: Not allowed to send image to public chat")
+            return 0
+        data = b64encode(image['data'])
+        imagestring = chr(3) + "data:image/" + str(image['type'].lower()) + ";base64," + str(data) + chr(3)
+        if not self.socketthread.send("SAY " + str(chatid) + chr(28) + text.replace('%image%', imagestring)):
+            print "Nope"
             return 0
         return 1
 
@@ -453,8 +474,8 @@ class client(threading.Thread):
             self.logger.error("Timeout while waiting for userinfo on user %s", id)
             return 0
         info = {}
-        fields = {0: 'user', 1: 'idle', 2: 'admin', 3: 'icon', 4: 'nick', 5: 'login', 6: 'ip', 7: 'host', 8: \
-                  'client-version', 9: 'cipher-name', 10: 'cipher-bits', 11: 'login-time', 12: 'idle-time', 13: \
+        fields = {0: 'user', 1: 'idle', 2: 'admin', 3: 'icon', 4: 'nick', 5: 'login', 6: 'ip', 7: 'host', 8:
+                  'client-version', 9: 'cipher-name', 10: 'cipher-bits', 11: 'login-time', 12: 'idle-time', 13:
                   'downloads', 14: 'uploads', 15: 'status', 16: 'image'}
         for key, fieldname in fields.items():
             try:
