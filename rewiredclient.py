@@ -170,7 +170,7 @@ class client(threading.Thread):
             self.socketthread.send("ICON 0" + chr(28) + self.icon)
         self.socketthread.send("USER " + self.username)
         self.socketthread.send("PASS " + self.password)
-        login = self.getMsg(201, 2)
+        login = self.getMsg(201, 10)
         if not login:
             fail = self.getMsg(510, 1)
             if fail:
@@ -310,12 +310,16 @@ class client(threading.Thread):
         if not chatid in self.activeChats:
             self.logger.debug("sendChatImage: not in chat %s", chatid)
             return 0
-        if chatid == 1:
-            self.logger.debug("sendChatImage: Not allowed to send image to public chat")
-            return 0
+        #if chatid == 1:
+            #self.logger.debug("sendChatImage: Not allowed to send image to public chat")
+            #return 0
         data = self.insertImageData(text, image)
+        try:
+            data = data.encode("UTF-8")
+        except:
+            pass
         if data:
-            if not self.socketthread.send("SAY " + str(chatid) + chr(28) + data):
+            if not self.socketthread.send("SAY " + str(chatid) + chr(28) + chr(128) + data):
                 self.logger.error("sendChatImage: Failed to send msg to server")
                 return 0
             return 1
@@ -399,8 +403,12 @@ class client(threading.Thread):
             self.logger.debug("sendChatImage: not connected or logged in properly")
             return 0
         data = self.insertImageData(text, image)
+        try:
+            data = data.encode("UTF-8")
+        except:
+            pass
         if data:
-            if not self.socketthread.send("MSG " + str(userid) + chr(28) + data):
+            if not self.socketthread.send("MSG " + str(userid) + chr(28) + chr(128) + data):
                 self.logger.error("sendPrivateMsgImage: Failed to send msg to server")
                 return 0
             return 1
