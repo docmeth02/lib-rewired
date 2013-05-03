@@ -146,8 +146,9 @@ class Handler():
         # handle the callback early so it can still get the userdata and cleanup after it
         if "__ClientLeave" in self.parent.notifications:
             try:
+                user = self.parent.userlist[int(values[1])]
                 for acallback in self.parent.notifications["__ClientLeave"]:
-                    acallback([int(values[1]), int(values[0])])
+                    acallback([int(values[1]), int(values[0])], {'user': user.login, 'nick': user.nick})
             except:
                 self.logger.debug("Error in callback for __ClientLeave")
                 pass  # continue as we still got some cleanup to do
