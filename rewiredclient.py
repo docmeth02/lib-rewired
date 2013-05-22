@@ -134,11 +134,11 @@ class client(threading.Thread):
     def reconnect(self):
         if self.pingtimer:  # cancel our running ping timer
             self.pingtimer.cancel()
-            self.pingtimer.join()
-        self.socketthread.join()  # destroy existing socket
+            self.pingtimer.join(3)
+        self.socketthread.keepalive = 0
+        self.socketthread.join(3)  # destroy existing socket
         self.socketthread = rewiredsocket.socket(self)  # create a new one
         self.socketthread.start()
-
         if not self.connect(self.address, self.port):
             return 0
         if not self.keepalive:  # shutdown?
@@ -567,6 +567,17 @@ class client(threading.Thread):
             return 0
         self.logger.debug("Banned user %s", id)
         return 1
+
+    def logout(self):
+        for achat in self.activeChats:
+            print "%s: LEAVE CHAT %s" % (self.id, achat)
+            if not self.socketthread.send("LEAVE %s" % achat):
+                self.logger.error("Failed to leave chat %s", achat)
+        self.activeChats = []
+        self.disconnect()
+        self.socketthread.keepalive = 0
+        return 1
+
 
 
 def readIcon(filename):
