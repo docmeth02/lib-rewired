@@ -488,6 +488,14 @@ class client(threading.Thread):
                 userlist.append(int(userid))
         return userlist
 
+    def setChatTopic(self, chat, topic):
+        if not self.privileges['changeTopic']:
+            self.logger.info("Not allowed to change Topic in chat %s", chat)
+        if self.loggedin:
+            if self.socketthread.send('TOPIC %s%s%s' % (chat, chr(28), topic)):
+                return 1
+        return 0
+
     def getUserInfo(self, id):
         if not int(id) in self.userlist:
             return 0
