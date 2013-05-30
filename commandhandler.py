@@ -170,7 +170,7 @@ class Handler():
         return 1
 
     def privateMessage(self, values):
-        self.logger.debug("Got 305 PM by user %s", values[0], values[1])
+        self.logger.debug("Got 305 PM by user %s", values[0])
         if "__PrivateMessage" in self.parent.notifications:
             try:
                 for acallback in self.parent.notifications["__PrivateMessage"]:
