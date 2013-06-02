@@ -19,6 +19,7 @@ class socket(threading.Thread):
                 self.socket = pysocket.socket(pysocket.AF_INET6, pysocket.SOCK_STREAM)
             except:
                 pass
+        self.socket.settimeout(1)
         self.queue = {}
         self.msgid = 0
         self.tlssocket = 0
@@ -37,6 +38,7 @@ class socket(threading.Thread):
                 except pysocket.error:
                     self.keepalive = 0
                     self.connected = 0
+                    break
                 while byte != chr(4):
                     if not self.keepalive:
                         break
@@ -85,10 +87,10 @@ class socket(threading.Thread):
         self.logger.debug("IN DISCONNECT")
         self.connected = 0
         try:
+            self.socket.shutdown(pysocket.SHUT_RDWR)
             self.socket.close()
-        except pysocket.error, ssl.error:
-            self.logger.debug("Socket Error on disconnect")
-            return 0
+        except:
+            pass
         return 1
 
     def send(self, data):
@@ -125,7 +127,7 @@ class socket(threading.Thread):
 
 def makeconn(host, port):
     for r in pysocket.getaddrinfo(host, port,
-                                0, pysocket.SOCK_STREAM):
+                                  0, pysocket.SOCK_STREAM):
         af, st, pr, _, sa = r
         s = pysocket.socket(af, st, pr)
         try:

@@ -159,8 +159,11 @@ class Handler():
             self.logger.debug("User %s left", values[1])
             return 1
         # client left a private chat
-        if not int(values[0]) in self.parent.userlist[int(values[1])].chats:
-            return 0  # this user never was active in this chat
+        try:
+            if not int(values[0]) in self.parent.userlist[int(values[1])].chats:
+                return 0  # this user never was active in this chat
+        except KeyError:
+            return 0
         self.parent.userlist[int(values[1])].chats.remove(int(values[0]))
         self.logger.debug("User %s left chat %s", values[1], values[0])
         # check if we are the only one left in the private cheat
@@ -189,6 +192,9 @@ class Handler():
             except:
                 self.logger.debug("Error in callback for __PrivateChatInvite")
                 return 0
+        else:
+            if self.parent.autojoinprivatec:
+                self.parent.joinPrivateChat(values[0])
         return 1
 
     def statusChange(self, values):
