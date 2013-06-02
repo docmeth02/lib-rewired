@@ -51,6 +51,7 @@ class client(threading.Thread):
         self.loggedin = 0
 
         self.autoreconnect = 1
+        self.autojoinprivatec = 1
 
     def run(self):
         while self.keepalive:
@@ -104,7 +105,7 @@ class client(threading.Thread):
                 pass
         if self.pingtimer:
             self.pingtimer.cancel()
-            self.pingtimer.join()
+            self.pingtimer.join(1)
         self.socketthread.keepalive = 0
         self.socketthread.join(1)
         raise SystemExit
@@ -356,7 +357,7 @@ class client(threading.Thread):
             self.logger.debug("startPrivateChat: not connected or logged in properly")
             return 0
         if not chatid in self.activeChats:
-            self.error("Can't invite user to private chat im not part off")
+            self.logger.error("Can't invite user to private chat im not part off")
             return 0
         self.socketthread.send("INVITE " + str(userid) + chr(28) + str(chatid))
         return 1
@@ -550,6 +551,13 @@ class client(threading.Thread):
             index += 1
         return transfers
 
+    def postNews(self, news):
+        if not self.privileges['postNews']:
+            self.logger.info("Not allowed to post news")
+        if self.socketthread.send('POST %s' % news):
+                return 1
+        return 0
+
     def kickUser(self, id, msg=""):
         if not self.privileges['kickUsers']:
             self.logger.info("kick: insufficient privileges")
@@ -585,6 +593,8 @@ class client(threading.Thread):
         self.disconnect()
         self.socketthread.keepalive = 0
         return 1
+
+
 
 
 
