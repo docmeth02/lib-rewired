@@ -1,4 +1,5 @@
 import rewiredsocket
+from wiredfiles import wiredfile
 import types
 import commandhandler
 import threading
@@ -609,6 +610,8 @@ class client(threading.Thread):
         self.logger.debug("Banned user %s", id)
         return 1
 
+## Accounts
+
     def getUserAccounts(self):
         if not self.privileges['editAccounts']:
             self.logger.error("getUserAccounts: Not allowed to read accounts")
@@ -794,6 +797,36 @@ class client(threading.Thread):
             self.logger.error("updateGroup: server returned error %s", error)
             return 0
         return 1
+
+## Files
+    def listDirectory(self, path):
+        msg = "LIST %s" % path
+        if not self.socketthread.send(msg):
+            self.logger.error("listDirectory: failed to send message")
+        data = self.getMsgGroup(410, 411, 10)
+        if not data:
+            error = self.checkErrorMsg([520])
+            if error:
+                self.logger.error("listDirectory: server returned error: %s for dir %s", error, path)
+            return 0
+        filelist = []
+        for akey, amsg in data.items():
+            filelist.append(wiredfile(self, amsg.msg))
+        return filelist
+
+    def createFolder(self, path):
+        # check path in upload folder here
+        if not self.privileges['createFolders']:
+            self.logger.error("createFolder: Not allowed to create new folders")
+            return 0
+        folder = wiredfile(self)
+        folder.type = 1
+        folder.path = path
+        if not folder.create():
+            return 0
+        if not folder.stat():
+            return 0
+        return folder
 
     def logout(self):
         for achat in self.activeChats:

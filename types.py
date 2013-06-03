@@ -32,9 +32,9 @@ class wiredMessages:
 
             400: True,
             401: True,
-            402: True,
-            410: True,
-            411: True,
+            402: False, # File Information
+            410: False, # File Listing
+            411: False, #File Listing done
             420: True,
             421: True,
             500: True,
@@ -48,7 +48,7 @@ class wiredMessages:
             514: False, # User exists
             515: True,
             516: False, # Permission denied
-            520: True,
+            520: False, # File or Directory Not Found
             521: True,
             522: True,
             523: True,
