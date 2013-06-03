@@ -44,7 +44,7 @@ class wiredMessages:
             510: False,  # Login Failed
             511: False,  # Banned
             512: True,
-            513: True,
+            513: False,  # Account Not Found
             514: False, # User exists
             515: True,
             516: False, # Permission denied

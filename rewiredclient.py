@@ -684,6 +684,12 @@ class client(threading.Thread):
         if error:
             self.logger.error("createUser: server returned error %s", error)
             return 0
+        if group:
+            if group in self.accountlist.groups:
+                if not username in self.accountlist.groups[group].members:
+                    self.accountlist.groups[group].members.append(username)
+        self.getUserAccounts()
+        self.accountlist.loadUser(username)
         return 1
 
     def createGroup(self, groupname, privs):
@@ -699,6 +705,50 @@ class client(threading.Thread):
         error = self.checkErrorMsg([514, 516])
         if error:
             self.logger.error("createGroup: server returned error %s", error)
+            return 0
+        self.getGroupAccounts()
+        self.accountlist.loadGroup(groupname)
+        return 1
+
+    def deleteUser(self, username):
+        if not self.privileges['deleteAccounts']:
+            self.logger.error("deleteUser: Not allowed to delete accounts")
+            return 0
+        if not username in self.accountlist.users:
+            self.logger.error("deleteUser: Unkown user %s", username)
+            return 0
+        if self.accountlist.users[username].group:
+            group = self.accountlist.users[username].group
+        else:
+            group = 0
+        msg = "DELETEUSER %s" % username
+        if not self.socketthread.send(msg):
+            self.logger.error("deleteUser: failed to send message")
+        error = self.checkErrorMsg([513, 516])
+        if error:
+            self.logger.error("deleteUser: server returned error %s", error)
+            return 0
+        if group in self.accountlist.groups:
+            if username in self.accountlist.groups[group].members:
+                self.accountlist.groups[group].members.remove(username)
+        return 1
+
+    def deleteGroup(self, groupname):
+        if not self.privileges['deleteAccounts']:
+            self.logger.error("deleteGroup: Not allowed to delete accounts")
+            return 0
+        if not groupname in self.accountlist.groups:
+            self.logger.error("deleteGroup: Unkown group %s", groupname)
+            return 0
+        if len(self.accountlist.groups[groupname].members):
+            self.logger.error("deleteGroup: Can't delete non empty group %s", groupname)
+            return 0
+        msg = "DELETEGROUP %s" % groupname
+        if not self.socketthread.send(msg):
+            self.logger.error("deleteGroup: failed to send message")
+        error = self.checkErrorMsg([513, 516])
+        if error:
+            self.logger.error("deleteGroup: server returned error %s", error)
             return 0
         return 1
 
