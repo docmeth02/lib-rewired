@@ -188,12 +188,15 @@ class client(threading.Thread):
         self.getUserList(1)
         return 1
 
-    def hashPassword(self):
-        if not self.password:
+    def hashPassword(self, supplied=False):
+        if not self.password and not supplied:
             return 0
         hash = hashlib.sha1()
-        hash.update(self.password)
-        self.password = hash.hexdigest().lower()
+        if not supplied:
+            hash.update(self.password)
+            self.password = hash.hexdigest().lower()
+        else:
+            hash.update(supplied)
         return hash.hexdigest().lower()
 
     def clientString(self):
@@ -669,6 +672,7 @@ class client(threading.Thread):
             self.logger.error("User %s already exists", username)
             return 0
         group = ''
+        password = self.hashPassword(password)
         if groupmember:
             if groupmember in self.accountlist.groups:
                 group = groupmember
@@ -749,6 +753,45 @@ class client(threading.Thread):
         error = self.checkErrorMsg([513, 516])
         if error:
             self.logger.error("deleteGroup: server returned error %s", error)
+            return 0
+        return 1
+
+    def updateUser(self, username):
+        if not self.privileges['editAccounts']:
+            self.logger.error("updateUser: Not allowed to modify accounts")
+            return 0
+        if not username in self.accountlist.users:
+            self.logger.error("updateUser: Unkown user %s", username)
+            return 0
+        user = self.accountlist.users[username]
+        if not user.group:
+            group = ''
+        else:
+            group = user.group
+        msg = "EDITUSER " + str(user.username) + chr(28) + str(user.password) + chr(28)\
+            + str(group) + chr(28) + str(user.privs.toString())
+        if not self.socketthread.send(msg):
+            self.logger.error("updateUser: failed to send message")
+        error = self.checkErrorMsg([513, 516])
+        if error:
+            self.logger.error("updateUser: server returned error %s", error)
+            return 0
+        return 1
+
+    def updateGroup(self, groupname):
+        if not self.privileges['editAccounts']:
+            self.logger.error("updateGroup: Not allowed to modify accounts")
+            return 0
+        if not groupname in self.accountlist.groups:
+            self.logger.error("updateGroup: Unkown group %s", groupname)
+            return 0
+        group = self.accountlist.groups[groupname]
+        msg = "EDITGROUP " + str(group.groupname) + chr(28) + str(group.privs.toString())
+        if not self.socketthread.send(msg):
+            self.logger.error("updateGroup: failed to send message")
+        error = self.checkErrorMsg([513, 516])
+        if error:
+            self.logger.error("updateGroup: server returned error %s", error)
             return 0
         return 1
 
