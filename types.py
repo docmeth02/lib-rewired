@@ -261,6 +261,7 @@ class accountlist():
                     if not account in self.groups[group].members:
                         self.groups[group].members.append(account)
                 self.users[account].group = group
+                self.users[account].privs = self.groups[group].privs  # Push group privs onto user
             self.users[account].isloaded = 1
             self.users[account].lastupdated = time()
         else:
