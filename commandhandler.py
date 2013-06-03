@@ -44,7 +44,7 @@ class Handler():
         elif type == 341:                       # Chat Topic
             self.gotChatTopic(values)
             return 1
-        elif type == 602:                       # Chat Topic
+        elif type == 602:                       # Privilege
             self.gotPrivileges(values)
             return 1
         else:

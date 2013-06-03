@@ -2,7 +2,7 @@ import rewiredsocket
 import types
 import commandhandler
 import threading
-from time import sleep
+from time import sleep, time
 from base64 import b64encode
 from socket import SHUT_RDWR
 from random import uniform
@@ -49,6 +49,7 @@ class client(threading.Thread):
         self.status = 0
         self.connected = 0
         self.loggedin = 0
+        self.accountlist = types.accountlist(self)
 
         self.autoreconnect = 1
         self.autojoinprivatec = 1
@@ -237,7 +238,7 @@ class client(threading.Thread):
 
     def getMsg(self, type, timeout=5):
         count = 0
-        self.logger.debug("timeout is: %s", timeout)
+        self.logger.debug("getMsg: timeout is: %s", timeout)
         while float(count) <= float(timeout):
             if self.socketthread.event.isSet():
                 for id, amsg in self.socketthread.queue.items():
@@ -251,7 +252,7 @@ class client(threading.Thread):
         return 0
 
     def getMsgGroup(self, msgtype, endtype, timeout=5):
-        self.logger.debug("timeout is: %s", timeout)
+        self.logger.debug("getMsgGroup: timeout is: %s", timeout)
         group = {}
         count = 0
         while float(count) <= float(timeout):
@@ -268,6 +269,27 @@ class client(threading.Thread):
             sleep(0.1)
             count += 0.1
         self.logger.debug("EXITING Without Group Termination EVENT")
+        return 0
+
+    def checkErrorMsg(self, msgtypes, timeout=1):
+        # since this blocks execution and we actually don't expect to receive an error the default timeout is low
+        self.logger.debug("checkErrorMsg: timeout is: %s", timeout)
+        if type(msgtypes) is not list:
+            self.logger.error("checkErrorMsg: expected type list for msgtypes but got %s", type(msgtypes))
+            return 0
+        count = 0
+        while float(count) <= float(timeout):
+            if self.socketthread.event.isSet():
+                msgs = self.socketthread.queue.items()
+                msgs.sort()
+                for id, amsg in msgs:
+                    if amsg.type in msgtypes:
+                        self.updateQueue(id)
+                        self.logger.debug("checkErrorMsg: received error %s after %s seconds", amsg.type, count)
+                        return amsg.type
+            count += 0.1
+            sleep(0.1)
+        self.logger.debug("checkErrorMsg: no error received after %s seconds", count)
         return 0
 
     def changeNick(self, newNick):
@@ -584,18 +606,110 @@ class client(threading.Thread):
         self.logger.debug("Banned user %s", id)
         return 1
 
+    def getUserAccounts(self):
+        if not self.privileges['editAccounts']:
+            self.logger.error("getUserAccounts: Not allowed to read accounts")
+            return 0
+        if not self.socketthread.send("USERS"):
+            self.logger.error("getAccountList: Failed to send USERS")
+        data = self.getMsgGroup(610, 611, 5)
+        if data:
+            if not self.accountlist:
+                self.accountlist = types.accountlist()
+            self.accountlist.updateUsers(data)
+        else:
+            self.logger.error("Failed to update user accounts")
+        return 1
+
+    def getGroupAccounts(self):
+        if not self.privileges['editAccounts']:
+            self.logger.error("getGroupAccounts: Not allowed to read accounts")
+            return 0
+        if not self.socketthread.send("GROUPS"):
+            self.logger.error("getAccountList: Failed to send USERS")
+        data = self.getMsgGroup(620, 621, 5)
+        if data:
+            self.accountlist.updateGroups(data)
+        else:
+            self.logger.error("Failed to update group accounts")
+        return 1
+
+    def loadAccountList(self):
+        if not self.privileges['editAccounts']:
+            self.logger.error("loadAccountList: Not allowed to read accounts")
+            return 0
+        if not self.getGroupAccounts():
+            self.logger.error("loadAccountList: failed to read groups")
+            return 0
+
+        if not self.getUserAccounts():
+            self.logger.error("loadAccountList: failed to read users")
+            return 0
+
+        for agroup in self.accountlist.groups:
+            if not self.accountlist.loadGroup(agroup):
+                self.logger.error("loadAccountList: failed to read group %s", agroup)
+                continue
+
+        for auser in self.accountlist.users:
+            if not self.accountlist.loadUser(auser):
+                self.logger.error("loadAccountList: failed to read user %s", auser)
+                continue
+
+        self.logger.debug("loadAccountList: loaded %s groups and %s users", len(self.accountlist.groups),
+                          len(self.accountlist.users))
+        self.accountlist.lastupdated = time()
+        return 1
+
+    def createUser(self, username, password, privs, groupmember=False):
+        if not self.privileges['createAccounts']:
+            self.logger.error("createUser: Not allowed to add new accounts")
+            return 0
+        if username in self.accountlist.users:
+            self.logger.error("User %s already exists", username)
+            return 0
+        group = ''
+        if groupmember:
+            if groupmember in self.accountlist.groups:
+                group = groupmember
+            else:
+                self.logger.error("Asked to add user %s as a member of group %s. But group doesn't exist",
+                                  username, groupmember)
+                return 0
+        msg = "CREATEUSER " + str(username) + chr(28) + str(password) + chr(28)\
+            + str(group) + chr(28) + str(privs.toString())
+        if not self.socketthread.send(msg):
+            self.logger.error("createUser: failed to send message")
+        error = self.checkErrorMsg([514, 516])
+        if error:
+            self.logger.error("createUser: server returned error %s", error)
+            return 0
+        return 1
+
+    def createGroup(self, groupname, privs):
+        if not self.privileges['createAccounts']:
+            self.logger.error("createGroup: Not allowed to add new accounts")
+            return 0
+        if groupname in self.accountlist.groups:
+            self.logger.error("Group %s already exists", groupname)
+            return 0
+        msg = "CREATEGROUP " + str(groupname) + chr(28) + str(privs.toString())
+        if not self.socketthread.send(msg):
+            self.logger.error("createGroup: failed to send message")
+        error = self.checkErrorMsg([514, 516])
+        if error:
+            self.logger.error("createGroup: server returned error %s", error)
+            return 0
+        return 1
+
     def logout(self):
         for achat in self.activeChats:
-            print "%s: LEAVE CHAT %s" % (self.id, achat)
             if not self.socketthread.send("LEAVE %s" % achat):
                 self.logger.error("Failed to leave chat %s", achat)
         self.activeChats = []
         self.disconnect()
         self.socketthread.keepalive = 0
         return 1
-
-
-
 
 
 def readIcon(filename):
