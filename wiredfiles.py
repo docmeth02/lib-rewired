@@ -1,3 +1,8 @@
+#       0 File
+#       1 Directory
+#       2 Uploads Directory
+#       3 Drop Box Directory
+
 class wiredfile():
     def __init__(self, parent, data=False):
         self.parent = parent
@@ -34,6 +39,8 @@ class wiredfile():
         if not data[0] == self.path:
             self.parent.logger.error("stat: requested info for %s got %s!", self.path, data[0])
         try:
+            if self.type:  # folder type might have changed
+                self.type = data[1]
             self.size = data[2]
             self.created = data[3]
             self.modified = data[4]
@@ -47,7 +54,7 @@ class wiredfile():
         return 1
 
     def create(self):
-        if self.type != 1:
+        if not self.type:
             self.parent.logger.error("create: non folder create requested: %s", self.path)
             return 0
         msg = "FOLDER %s" % self.path
@@ -59,3 +66,25 @@ class wiredfile():
             self.parent.logger.error("create: server returned error: %s on %s", error, self.path)
             return 0
         return 1
+
+    def changeType(self, newType=False):
+        if not self.path:
+            self.parent.logger.error("changeType: no path supplied")
+        if not self.type:
+            self.parent.logger.error("changeType: Can only operate on folders: %s", self.path)
+            return 0
+        if not self.parent.privileges['alterFiles']:
+            self.parent.logger.error("Not allowed to change folder type: %s", self.path)
+        if newType:
+            self.type = newType
+        msg = "TYPE " + str(self.path) + chr(28) + str(self.type)
+        if not self.parent.socketthread.send(msg):
+            self.parent.logger.error("changeType: failed to send reqeuest")
+            return 0
+        error = self.parent.checkErrorMsg([516, 520])
+        if error:
+            self.parent.logger.error("changeType: server returned error: %s on %s", error, self.path)
+            return 0
+        return 1
+
+
