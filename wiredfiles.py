@@ -3,6 +3,7 @@
 #       2 Uploads Directory
 #       3 Drop Box Directory
 
+
 class wiredfile():
     def __init__(self, parent, data=False):
         self.parent = parent
@@ -87,4 +88,19 @@ class wiredfile():
             return 0
         return 1
 
-
+    def changeComment(self, suppliedComment=False):
+        if not self.path:
+            self.parent.logger.error("comment: no path supplied")
+        if not self.parent.privileges['alterFiles']:
+            self.parent.logger.error("Not allowed to comment on: %s", self.path)
+        if suppliedComment:
+            self.comment = suppliedComment
+        msg = "COMMENT " + str(self.path) + chr(28) + str(self.comment)
+        if not self.parent.socketthread.send(msg):
+            self.parent.logger.error("comment: failed to send reqeuest")
+            return 0
+        error = self.parent.checkErrorMsg([516, 520])
+        if error:
+            self.parent.logger.error("comment: server returned error: %s on %s", error, self.path)
+            return 0
+        return 1
