@@ -96,12 +96,13 @@ class socket(threading.Thread):
     def send(self, data):
         if not self.connected:
             return 0
-        try:
-            self.tlssocket.send(str(data) + chr(4))
-        except pysocket.error:
-            self.logger.debug("send: socket error")
-            return 0
-        return 1
+        with self.lock:
+            try:
+                self.tlssocket.send(str(data) + chr(4))
+            except pysocket.error:
+                self.logger.debug("send: socket error")
+                return 0
+            return 1
 
     def queueMsg(self, data):
         # parses the server msg and appends it to the msg queue
