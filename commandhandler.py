@@ -1,5 +1,6 @@
 import types
 import logging
+from time import sleep
 
 
 class Handler():
@@ -43,6 +44,12 @@ class Handler():
             return 1
         elif type == 341:                       # Chat Topic
             self.gotChatTopic(values)
+            return 1
+        elif type == 400:                       # Transfer Ready
+            self.transferReady(values)
+            return 1
+        elif type == 401:                       # Transfer Queued
+            self.transferQueued(values)
             return 1
         elif type == 602:                       # Privilege
             self.gotPrivileges(values)
@@ -246,4 +253,36 @@ class Handler():
         self.parent.privileges['downloadLimit'] = int(values[20])
         self.parent.privileges['uploadLimit'] = int(values[21])
         self.parent.privileges['changeTopic'] = int(values[22])
+        return 1
+
+    def transferReady(self, values):
+        try:
+            path = values[0]
+            offset = values[1]
+            id = values[2]
+        except KeyError:
+            self.logger.error("transferReady: invalid field count in server response")
+            return 0
+        if not path in self.parent.transfers:
+            self.logger.error("transferReady: got invalid transfer object for %s", path)
+            return 0
+        with self.parent.lock:
+            self.parent.transfers[path].id = id
+            self.parent.transfers[path].offset = offset
+        self.parent.transfers[path].start()
+        return 1
+
+    def transferQueued(self, values):
+        try:
+            path = values[0]
+            queuepos = values[1]
+        except KeyError:
+            self.logger.error("transferQueued: invalid field count in server response")
+        with self.parent.lock:
+            try:
+                self.parent.transfers[path].queuepos = queuepos
+            except Exception as e:
+                self.parent.logger.error("transferQueued: invalid key: %s %s", queuepos, e)
+                return 0
+        #self.parent.logger.debug("Quepos updated: %s -> %s", path, queuepos)
         return 1

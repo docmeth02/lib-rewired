@@ -30,8 +30,8 @@ class wiredMessages:
             340: True,
             341: True,  # Chat Topic
 
-            400: True,
-            401: True,
+            400: True, # Transfer Ready
+            401: True, # Transfer Qeued
             402: False, # File Information
             410: False, # File Listing
             411: False, #File Listing done
@@ -49,7 +49,7 @@ class wiredMessages:
             515: True,
             516: False, # Permission denied
             520: False, # File or Directory Not Found
-            521: True,
+            521: False,  # File exists
             522: True,
             523: True,
             600: False,  # User account item

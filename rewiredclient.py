@@ -1,5 +1,5 @@
 import rewiredsocket
-from wiredfiles import wiredfile
+from wiredfiles import wiredfile, wiredtransfer
 import types
 import commandhandler
 import threading
@@ -52,10 +52,15 @@ class client(threading.Thread):
         self.loggedin = 0
         self.accountlist = types.accountlist(self)
 
+        self.transfers = {}
+
         self.autoreconnect = 1
         self.autojoinprivatec = 1
+        self.maxTransfers = 1
 
     def run(self):
+        self.queuemonitor = threading.Timer(5, self.checkQueue)
+        self.queuemonitor.start()
         while self.keepalive:
             if self.socketthread.connected:
                 if not self.keepalive:
@@ -100,6 +105,8 @@ class client(threading.Thread):
 
             sleep(0.1)
         self.logger.debug("Exit librewired")
+        self.queuemonitor.cancel()
+        self.queuemonitor.join()
         if self.socketthread.is_alive():
             try:
                 self.socketthread.socket.shutdown(SHUT_RDWR)  # close socket to raise exception
@@ -240,16 +247,19 @@ class client(threading.Thread):
         self.socketthread.lock.release()
         return 1
 
-    def getMsg(self, type, timeout=5):
+    def getMsg(self, msgtype, timeout=5):
         count = 0
+        if type(msgtype) == int:
+            msgtype = [msgtype]
         self.logger.debug("getMsg: timeout is: %s", timeout)
         while float(count) <= float(timeout):
             if self.socketthread.event.isSet():
                 for id, amsg in self.socketthread.queue.items():
-                    if amsg.type == type:
-                        self.updateQueue(id)
-                        self.logger.debug("RETURNING EVENT")
-                        return amsg
+                    for atype in msgtype:
+                        if amsg.type == atype:
+                            self.updateQueue(id)
+                            self.logger.debug("RETURNING EVENT")
+                            return amsg
             sleep(0.1)
             count += 0.1
         self.logger.debug("EXITING Without EVENT")
@@ -799,8 +809,10 @@ class client(threading.Thread):
         return 1
 
 ## Files
-    def listDirectory(self, path):
+    def listDirectory(self, path, recursive=False):
         msg = "LIST %s" % path
+        if recursive:
+            msg = "LISTRECURSIVE %s" % path
         if not self.socketthread.send(msg):
             self.logger.error("listDirectory: failed to send message")
         data = self.getMsgGroup(410, 411, 10)
@@ -827,6 +839,47 @@ class client(threading.Thread):
         if not folder.stat():
             return 0
         return folder
+
+    def download(self, lpath, rpath):
+        downloader = wiredtransfer(self, lpath, rpath)
+        downloader.initDownload()
+
+    def upload(self, lpath, rpath):
+        uploader = wiredtransfer(self, lpath, rpath)
+        uploader.initUpload()
+
+    def activeTransfers(self, trtype):
+        active = 0
+        with self.lock:
+            for akey, atransfer in self.transfers.items():
+                if atransfer.trtype == trtype and (atransfer.active or atransfer.id):
+                    active += 1
+        return active
+
+    def dequeueTransfer(self, name):
+        if not name in self.transfers:
+            self.logger.error("dequeueTransfer: invalid transfer %s specified", name)
+            return 0
+        with self.lock:
+            del(self.transfers[name])
+        self.checkQueue(True)
+        return 1
+
+    def checkQueue(self, once=False):
+        for trtype in (0, 1):
+            if len(self.transfers):
+                for akey, atransfer in self.transfers.items():
+                    if self.activeTransfers(trtype) >= self.maxTransfers:
+                        break
+                    if atransfer.trtype == trtype and not atransfer.active:
+                        with atransfer.lock:
+                            atransfer.active = 1
+                            atransfer.sendRequest()
+                        break
+        if not once:
+            self.queuemonitor = threading.Timer(5, self.checkQueue)
+            self.queuemonitor.start()
+        return 1
 
     def logout(self):
         for achat in self.activeChats:
