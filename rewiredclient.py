@@ -843,10 +843,12 @@ class client(threading.Thread):
     def download(self, lpath, rpath):
         downloader = wiredtransfer(self, lpath, rpath)
         downloader.initDownload()
+        return downloader
 
     def upload(self, lpath, rpath):
         uploader = wiredtransfer(self, lpath, rpath)
         uploader.initUpload()
+        return uploader
 
     def activeTransfers(self, trtype):
         active = 0
@@ -856,10 +858,17 @@ class client(threading.Thread):
                     active += 1
         return active
 
-    def dequeueTransfer(self, name):
+    def dequeueTransfer(self, name, reason=0):
         if not name in self.transfers:
             self.logger.error("dequeueTransfer: invalid transfer %s specified", name)
             return 0
+        item = self.transfers[name].transfermonitor.queue[name]
+        if not reason:
+            with self.transfers[name].transfermonitor.lock:
+                item['bytesdone'] = item['size']
+                if 'rate' in item:
+                    del(item['rate'])
+                item['status'] = 1
         with self.lock:
             del(self.transfers[name])
         self.checkQueue(True)

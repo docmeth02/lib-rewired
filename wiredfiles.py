@@ -17,6 +17,7 @@ class wiredfile():
     def __init__(self, parent, data=False):
         self.parent = parent
         self.logger = self.parent.logger
+        self.transferParent = 0
         self.path = ""
         self.type = 0
         self.size = 0
@@ -162,7 +163,7 @@ class wiredfile():
                 self.offset = 0
         with self.parent.lock:
             self.parent.transfers[self.path] = transferObject(self.parent, self.size, 0,
-                                                              targetpath, self.path, self.offset)
+                                                              targetpath, self.path, self.offset, self.transferParent)
         return 1
 
     def queueupload(self, localpath):
@@ -171,14 +172,18 @@ class wiredfile():
             self.logger.error("Not allowed to upload %s", self.path)
         with self.parent.lock:
             self.parent.transfers[self.path] = transferObject(self.parent, self.size, 1,
-                                                              localpath, self.path, self.offset)
+                                                              localpath, self.path, self.offset, self.transferParent)
         return 1
+
+    def transferParenthook(self, parent):
+        self.transferParent = parent
 
 
 class wiredtransfer():
     def __init__(self, parent, lpath, rpath):
         self.parent = parent
         self.logger = self.parent.logger
+        self.lock = threading.RLock()
         self.localpath = lpath
         self.localtarget = lpath
         self.remotepath = rpath
@@ -187,6 +192,7 @@ class wiredtransfer():
         self.trtype = 0
         self.files = {}
         self.folders = {}
+        self.queue = {}
 
     def initDownload(self):
         self.trtype = 0
@@ -211,8 +217,12 @@ class wiredtransfer():
                     return 0
                 ## queue download of files
                 for akey, afile in self.files.items():
-                    localpath = path.join(self.localtarget, path.relpath(afile.path, self.remotepath))
-                    afile.queuedownload(localpath)
+                    with self.lock:
+                        localpath = path.join(self.localtarget, path.relpath(afile.path, self.remotepath))
+                        afile.transferParenthook(self)
+                        afile.queuedownload(localpath)
+                        self.addQueued(afile.path, afile.size, 0)
+
         else:
             localpath = path.join(self.localtarget, path.basename(rpath.path))
             rpath.queuedownload(localpath)
@@ -238,10 +248,13 @@ class wiredtransfer():
             if not self.createRemotePath():
                 self.logger.error("initUpload: failed to create remote folder envoirnment")
             for akey, afile in self.files.items():
-                self.files[akey] = wiredfile(self.parent)
-                self.files[akey].size = os.stat(akey).st_size
-                self.files[akey].path = path.join(self.remotetarget, afile)
-                self.files[akey].queueupload(akey)
+                with self.lock:
+                    self.files[akey] = wiredfile(self.parent)
+                    self.files[akey].size = os.stat(akey).st_size
+                    self.files[akey].path = path.join(self.remotetarget, afile)
+                    self.files[akey].transferParenthook(self)
+                    self.files[akey].queueupload(akey)
+                    self.addQueued(akey, self.files[akey].size, 0)
 
         else:  # single file
             file = wiredfile(self.parent)
@@ -282,11 +295,43 @@ class wiredtransfer():
                     return 0
             return 1
 
+    def addQueued(self, path, size, status):
+        with self.lock:
+            self.queue[path] = {'size': int(size), 'bytesdone': 0, 'status': int(status)}
+        return 1
+
+    def status(self):
+        status = {}
+        status['totalfiles'] = len(self.queue)
+        status['done'] = 0
+        status['failed'] = 0
+        status['skipped'] = 0
+        status['bytes'] = 0
+        status['bytesdone'] = 0
+        status['rate'] = 0
+        status['complete'] = 0
+        with self.lock:
+            for akey, aitem in self.queue.items():
+                status['bytes'] += aitem['size']
+                if aitem['status']:
+                    status['done'] += 1
+                    if aitem['status'] == 2:
+                        status['skipped'] += 1
+                    if aitem['status'] == 3:
+                        status['failed'] += 1
+                if 'rate' in aitem:
+                    status['rate'] += aitem['rate']
+                status['bytesdone'] += int(aitem['bytesdone'])
+        if status['bytesdone'] == status['bytes']:
+            status['complete'] = 1
+        return status
+
 
 class transferObject(threading.Thread):
-    def __init__(self, parent, size, trtype, lpath, rpath, offset):
+    def __init__(self, parent, size, trtype, lpath, rpath, offset, transfermonitor=0):
         threading.Thread.__init__(self)
         self.parent = parent
+        self.transfermonitor = transfermonitor
         self.lock = threading.Lock()
         self.trtype = trtype  # 0 download / 1 upload
         self.lpath = lpath
@@ -443,6 +488,11 @@ class transferObject(threading.Thread):
             if not buf:  # empty string means dead socket or eof
                 break
             data_count += len(buf)
+            if time.time() >= time_next:
+                with self.transfermonitor.lock:
+                    self.transfermonitor.queue[self.rpath]['rate'] = self.rate
+                    self.transfermonitor.queue[self.rpath]['bytesdone'] = self.bytesdone
+
             if self.limit and data_count >= self.limit * interval:
                 lastbytes = data_count
                 data_count = 0
