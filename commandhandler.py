@@ -268,7 +268,8 @@ class Handler():
             return 0
         with self.parent.lock:
             self.parent.transfers[path].id = id
-            self.parent.transfers[path].offset = offset
+            if self.parent.transfers[path].trtype:  # is upload
+                self.parent.transfers[path].offset = int(offset)
         self.parent.transfers[path].start()
         return 1
 

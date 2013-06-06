@@ -161,16 +161,17 @@ class wiredfile():
                     return 0
                 self.offset = 0
         with self.parent.lock:
-            self.parent.transfers[self.path] = transferObject(self.parent, self.size, 0, targetpath, self.path, self.offset)
+            self.parent.transfers[self.path] = transferObject(self.parent, self.size, 0,
+                                                              targetpath, self.path, self.offset)
         return 1
 
     def queueupload(self, localpath):
+        self.offset = 0
         if not self.parent.privileges['upload']:
             self.logger.error("Not allowed to upload %s", self.path)
-        ## remote part file check
-        self.offset = 0
         with self.parent.lock:
-            self.parent.transfers[self.path] = transferObject(self.parent, self.size, 1, localpath, self.path, self.offset)
+            self.parent.transfers[self.path] = transferObject(self.parent, self.size, 1,
+                                                              localpath, self.path, self.offset)
         return 1
 
 
@@ -334,11 +335,14 @@ class transferObject(threading.Thread):
             outfile = self.tlssocket
             try:
                 infile = open(str(self.lpath), 'r')
-                # spool to offset
             except Exception as e:
                 self.parent.logger.error("Failed to open local file %s", self.lpath)
                 self.failed = 1
                 self.shutdown()
+            if int(self.offset):
+                self.parent.logger.error("Resuming %s - Seeking to byte %s", self.rpath, self.offset)
+                infile.seek(int(self.offset))
+                self.bytesdone = int(self.offset)
 
         else:  # download
             infile = self.tlssocket
