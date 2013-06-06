@@ -54,7 +54,7 @@ class wiredfile():
             self.size = data[2]
             self.created = data[3]
             self.modified = data[4]
-            if not self.type:
+            if not int(self.type):
                 self.checksum = data[5]
             if data[6]:
                 self.comment = data[6]
@@ -132,10 +132,36 @@ class wiredfile():
     def queuedownload(self, targetpath):
         if not self.parent.privileges['download']:
             self.logger.error("Not allowed to download %s", self.path)
-        ## local part file check
-        self.offset = 0
+        self.offset, resume = (0, 0)
+        if path.exists(targetpath + ".wiredTransfer"):
+            ## partial file exists
+            partfile = targetpath + ".wiredTransfer"
+            try:
+                size = os.stat(partfile).st_size
+            except OSError:
+                self.logger.error("queuedownload: Failed to read partial file %s", partfile)
+                return 0
+            if size >= 1048576:
+                if not self.stat():
+                    self.logger.error("queuedownload: failed to get server checksum for partial file %s", partfile)
+                    return 0
+                if self.checksum:
+                    localchecksum = hashFile(partfile)
+                    if not self.checksum == localchecksum:
+                        self.logger.error("queuedownload: checksum mismatch for local file %s", partfile)
+                        resume = 0
+                    resume = 1
+                    self.offset = size
+            if path.exists(targetpath + ".wiredTransfer") and not resume:
+                ## local file to small for checksuming or invalid checksum - discard and start over
+                try:
+                    os.unlink(targetpath + ".wiredTransfer")
+                except OSError:
+                    self.logger.error("queuedownload: failed to delete partial file %s", targetpath + ".wiredTransfer")
+                    return 0
+                self.offset = 0
         with self.parent.lock:
-            self.parent.transfers[self.path] = transferObject(self.parent, self.size, 0, targetpath, self.path)
+            self.parent.transfers[self.path] = transferObject(self.parent, self.size, 0, targetpath, self.path, self.offset)
         return 1
 
     def queueupload(self, localpath):
@@ -144,7 +170,7 @@ class wiredfile():
         ## remote part file check
         self.offset = 0
         with self.parent.lock:
-            self.parent.transfers[self.path] = transferObject(self.parent, self.size, 1, localpath, self.path)
+            self.parent.transfers[self.path] = transferObject(self.parent, self.size, 1, localpath, self.path, self.offset)
         return 1
 
 
@@ -257,7 +283,7 @@ class wiredtransfer():
 
 
 class transferObject(threading.Thread):
-    def __init__(self, parent, size, trtype, lpath, rpath):
+    def __init__(self, parent, size, trtype, lpath, rpath, offset):
         threading.Thread.__init__(self)
         self.parent = parent
         self.lock = threading.Lock()
@@ -269,7 +295,7 @@ class transferObject(threading.Thread):
 
         self.active = 0
         self.failed = 0
-        self.offset = 0
+        self.offset = offset
         self.checksum = 0
         self.keepalive = 1
         self.bytestotal = int(size)
@@ -316,12 +342,19 @@ class transferObject(threading.Thread):
 
         else:  # download
             infile = self.tlssocket
+            mode = 'wb'
+            if self.offset:
+                mode = 'ab'
             try:
-                outfile = open(str(self.lpath) + ".wiredTransfer", 'w')
+                outfile = open(str(self.lpath) + ".wiredTransfer", mode)
             except Exception as e:
                 self.parent.logger.error("Failed to open local file %s", self.lpath)
                 self.failed = 1
                 self.shutdown()
+            if self.offset:
+                self.parent.logger.error("Resuming %s - Seeking to byte %s", self.rpath, self.offset)
+                outfile.seek(int(self.offset))
+                self.bytesdone = int(self.offset)
 
         if not self.process(infile, outfile):
             self.parent.logger.error("Transfer %s failed", self.id)
