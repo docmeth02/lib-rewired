@@ -862,8 +862,12 @@ class client(threading.Thread):
         if not name in self.transfers:
             self.logger.error("dequeueTransfer: invalid transfer %s specified", name)
             return 0
-        item = self.transfers[name].transfermonitor.queue[name]
-        if not reason:
+        try:
+            item = 0
+            item = self.transfers[name].transfermonitor.queue[name]
+        except KeyError:
+            self.logger.error("dequeueTransfer: invalid key %s", name)
+        if not reason and item:
             with self.transfers[name].transfermonitor.lock:
                 item['bytesdone'] = item['size']
                 if 'rate' in item:

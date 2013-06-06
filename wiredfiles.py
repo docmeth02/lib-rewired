@@ -43,7 +43,7 @@ class wiredfile():
         if not self.parent.socketthread.send(msg):
             self.logger.error("stat: failed to send msg to server")
             return 0
-        data = self.parent.getMsg(402, 0.5)
+        data = self.parent.getMsg(402, 1)
         if not data:
             self.logger.error("stat: request for %s timed out", self.path)
             return 0
@@ -70,7 +70,7 @@ class wiredfile():
             return 0
         msg = "FOLDER %s" % self.path
         if not self.parent.socketthread.send(msg):
-            self.logger.error("creat: failed to send reqeuest")
+            self.logger.error("create: failed to send reqeuest")
             return 0
         error = self.parent.checkErrorMsg([516, 521])
         if error:
@@ -253,8 +253,8 @@ class wiredtransfer():
                     self.files[akey].size = os.stat(akey).st_size
                     self.files[akey].path = path.join(self.remotetarget, afile)
                     self.files[akey].transferParenthook(self)
-                    self.files[akey].queueupload(akey)
-                    self.addQueued(akey, self.files[akey].size, 0)
+                    if self.files[akey].queueupload(akey):
+                        self.addQueued(self.files[akey].path, self.files[akey].size, 0)
 
         else:  # single file
             file = wiredfile(self.parent)
@@ -445,6 +445,7 @@ class transferObject(threading.Thread):
             if not self.checksum:
                 self.parent.logger.error("sendRequest: Unable to hash local file: %s", self.lpath)
                 return 0
+            errorcodes = [516, 521, 522, 523]
             msg = "PUT " + str(self.rpath) + chr(28) + str(self.bytestotal) + chr(28) + str(self.checksum)
             if not self.parent.socketthread.send(msg):
                 self.parent.logger.error("sendRequest: failed to send reqeuest")
@@ -454,14 +455,15 @@ class transferObject(threading.Thread):
                 self.parent.dequeueTransfer(self.rpath)
                 return 0
         else:
+            errorcodes = [516, 520, 523]
             msg = "GET " + str(self.rpath) + chr(28) + str(self.offset)
             if not self.parent.socketthread.send(msg):
                 self.parent.logger.error("queuedownload: failed to send reqeuest")
                 return 0
 
-        error = self.parent.checkErrorMsg([516, 520, 523])
+        error = self.parent.checkErrorMsg(errorcodes)
         if error:
-            self.parent.logger.error("sendRequest: server returned error %s", )
+            self.parent.logger.error("sendRequest: server returned error %s", error)
         return 1
 
     def startTransfer(self):
