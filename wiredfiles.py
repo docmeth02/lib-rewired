@@ -316,6 +316,13 @@ class wiredtransfer():
                 self.queue[path] = {'size': int(size), 'bytesdone': 0, 'status': int(status)}
         return 1
 
+    def getActiveTransfer(self):
+        with self.lock:
+            for akey, aitem in self.queue.items():
+                if 'rate' in aitem:
+                    return (akey, aitem['rate'], aitem['bytesdone'], aitem['size'])
+        return 0
+
     def status(self):
         status = {}
         status['totalfiles'] = len(self.queue)
