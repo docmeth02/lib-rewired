@@ -107,6 +107,10 @@ class client(threading.Thread):
         self.logger.debug("Exit librewired")
         self.queuemonitor.cancel()
         self.queuemonitor.join()
+        if len(self.transfers):
+            for akey, atransfer in self.transfers.items():
+                with atransfer.lock:
+                    atransfer.keepalive = 0
         if self.socketthread.is_alive():
             try:
                 self.socketthread.socket.shutdown(SHUT_RDWR)  # close socket to raise exception
@@ -880,7 +884,8 @@ class client(threading.Thread):
             item['bytesdone'] = item['size']
             item['status'] = 3
         with self.lock:
-            del(self.transfers[name])
+            if name in self.transfers:
+                del(self.transfers[name])
         self.checkQueue(True)
         return 1
 
