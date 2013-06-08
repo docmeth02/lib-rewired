@@ -873,6 +873,12 @@ class client(threading.Thread):
                 if 'rate' in item:
                     del(item['rate'])
                 item['status'] = 1
+        elif reason == 2 and item:
+            item['bytesdone'] = item['size']
+            item['status'] = 2
+        elif reason == 3 and item:
+            item['bytesdone'] = item['size']
+            item['status'] = 3
         with self.lock:
             del(self.transfers[name])
         self.checkQueue(True)
