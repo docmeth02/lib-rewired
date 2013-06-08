@@ -219,6 +219,13 @@ class wiredtransfer():
                 for akey, afile in self.files.items():
                     with self.lock:
                         localpath = path.join(self.localtarget, path.relpath(afile.path, self.remotepath))
+                        if path.exists(localpath):
+                            afile.stat()
+                            if afile.checksum:
+                                if afile.checksum == hashFile(localpath):
+                                    # skiphook
+                                    self.addQueued(afile.path, afile.size, 2)
+                                    continue
                         afile.transferParenthook(self)
                         afile.queuedownload(localpath)
                         self.addQueued(afile.path, afile.size, 0)
@@ -232,19 +239,25 @@ class wiredtransfer():
         self.trtype = 1
         if path.isdir(self.localpath):  # folder
             self.remotetarget = path.join(self.remotepath, path.basename(self.localpath))
+            filelist = self.parent.listDirectory(self.remotepath, True)
             self.type = 1   # set folder bit
             for dirpath, dirnames, filenames in walk(self.localpath):
                 if dirpath:
                         apath = path.relpath(dirpath, self.localpath)
-                        if apath != '.':
+                        if pathinfilelist(filelist, path.join(self.remotetarget, apath)):
+                            pass  # directory already exists on server
+                        elif apath != '.':
                             self.folders[apath] = apath
                 if filenames:
                     for afilename in filenames:
-                        if '.' in afilename[:1]:
-                            continue
-                        afile = path.join(self.localpath, dirpath, afilename)
-                        self.files[afile] = path.relpath(afile, self.localpath)
-
+                        remotepath = path.join(self.remotetarget, path.relpath(dirpath, self.localpath), afilename)
+                        remotepath = pathinfilelist(filelist, remotepath)
+                        if remotepath:  # file already exists on server
+                            ## maybe compare checksums here (optionally?)
+                            self.addQueued(remotepath.path, remotepath.size, 2)
+                        elif not '.' in afilename[:1]:
+                            afile = path.join(self.localpath, dirpath, afilename)
+                            self.files[afile] = path.relpath(afile, self.localpath)
             if not self.createRemotePath():
                 self.logger.error("initUpload: failed to create remote folder envoirnment")
             for akey, afile in self.files.items():
@@ -297,7 +310,10 @@ class wiredtransfer():
 
     def addQueued(self, path, size, status):
         with self.lock:
-            self.queue[path] = {'size': int(size), 'bytesdone': 0, 'status': int(status)}
+            if int(status) > 1:
+                self.queue[path] = {'size': int(size), 'bytesdone': int(size), 'status': int(status)}
+            else:
+                self.queue[path] = {'size': int(size), 'bytesdone': 0, 'status': int(status)}
         return 1
 
     def status(self):
@@ -399,7 +415,7 @@ class transferObject(threading.Thread):
             except Exception as e:
                 self.parent.logger.error("Failed to open local file %s", self.lpath)
                 self.failed = 1
-                self.shutdown()
+                self.shutdown(3)
             if self.offset:
                 self.parent.logger.error("Resuming %s - Seeking to byte %s", self.rpath, self.offset)
                 outfile.seek(int(self.offset))
@@ -415,12 +431,13 @@ class transferObject(threading.Thread):
             except Exception as e:
                 self.parent.logger.error("Failed to move transfer tempfile to %s", self.lpath)
                 self.failed = 1
+                self.shutdown(3)
         self.shutdown()
 
-    def shutdown(self):
+    def shutdown(self, reason=0):
         with self.lock:
             self.keepalive = 0
-        self.parent.dequeueTransfer(self.rpath)
+        self.parent.dequeueTransfer(self.rpath, reason)
         self.parent.logger.debug("Stop transfer thread %s", self.rpath)
         raise SystemExit
 
@@ -558,3 +575,10 @@ def hashFile(target):
         return 0
     hash.update(data)
     return str(hash.hexdigest())
+
+
+def pathinfilelist(filelist, path):
+    for apath in filelist:
+        if apath.path == path:
+            return apath
+    return 0
