@@ -585,6 +585,8 @@ def hashFile(target):
 
 
 def pathinfilelist(filelist, path):
+    if not filelist:
+        return 0
     for apath in filelist:
         if apath.path == path:
             return apath

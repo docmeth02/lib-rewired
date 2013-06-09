@@ -116,6 +116,7 @@ class client(threading.Thread):
                 self.socketthread.socket.shutdown(SHUT_RDWR)  # close socket to raise exception
             except IOError:
                 pass
+        self.connected = 0
         if self.pingtimer:
             self.pingtimer.cancel()
             self.pingtimer.join(1)
