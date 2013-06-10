@@ -270,7 +270,8 @@ class Handler():
             self.parent.transfers[path].id = id
             if self.parent.transfers[path].trtype:  # is upload
                 self.parent.transfers[path].offset = int(offset)
-        self.parent.transfers[path].start()
+        if not self.parent.transfers[path].is_alive():
+            self.parent.transfers[path].start()
         return 1
 
     def transferQueued(self, values):
