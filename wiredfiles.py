@@ -273,7 +273,9 @@ class wiredtransfer():
             file = wiredfile(self.parent)
             file.size = os.stat(self.localpath).st_size
             file.path = path.join(self.remotepath, path.basename(self.localpath))
-            file.queueupload(self.localpath)
+            file.transferParenthook(self)
+            if file.queueupload(self.localpath):
+                self.addQueued(file.path, file.size, 0)
         return 1
 
     def createLocalPath(self):
