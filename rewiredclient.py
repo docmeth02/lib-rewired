@@ -814,6 +814,18 @@ class client(threading.Thread):
         return 1
 
 ## Files
+    def search(self, query):
+        result = []
+        if not self.socketthread.send("SEARCH %s" % query):
+            self.logger.error("search: failed to send message")
+        data = self.getMsgGroup(420, 421, 20)
+        if not data:
+            self.logger.info("search: No results for %s", query)
+            return 0
+        for akey, amsg in data.items():
+            result.append(wiredfile(self, amsg.msg))
+        return result
+
     def listDirectory(self, path, recursive=False):
         msg = "LIST %s" % path
         if recursive:

@@ -35,8 +35,8 @@ class wiredMessages:
             402: False, # File Information
             410: False, # File Listing
             411: False, #File Listing done
-            420: True,
-            421: True,
+            420: False,  # Search Listing
+            421: False,  # Search Listing End
             500: True,
             501: True,
             502: True,
