@@ -260,6 +260,7 @@ class wiredtransfer():
                             self.files[afile] = path.relpath(afile, self.localpath)
             if not self.createRemotePath():
                 self.logger.error("initUpload: failed to create remote folder envoirnment")
+                return 0
             for akey, afile in self.files.items():
                 with self.lock:
                     self.files[akey] = wiredfile(self.parent)
@@ -293,19 +294,16 @@ class wiredtransfer():
 
     def createRemotePath(self):
         if self.type:  # is directory structure
-            rpath = createRdir(self, self.remotepath)
-            if not rpath:
+            if not createRdir(self, self.remotepath):
                 self.logger.error("initUpload: Failed to create %s", self.remotepath)
                 return 0
-            remotepath = path.join(rpath.path, path.basename(self.localpath))
-            rpath = createRdir(self, remotepath)
-            if not rpath:
+            remotepath = path.join(self.remotepath, path.basename(self.localpath))
+            if not createRdir(self, remotepath):
                 self.logger.error("initUpload: Failed to create %s", remotepath)
                 return 0
             keys = sorted(self.folders, key=lambda key: self.folders[key])
             for akey in keys:
-                rdir = createRdir(self, path.join(remotepath, akey))
-                if not rdir:
+                if not createRdir(self, path.join(remotepath, akey)):
                     self.logger.error("createRemotePath: failed to create %s", path.join(remotepath, akey))
                     return 0
             return 1
