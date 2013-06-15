@@ -224,6 +224,7 @@ class privileges():
         privmask += str(self.changeTopic)
         return privmask
 
+
 class accountlist():
     def __init__(self, parent):
         self.parent = parent

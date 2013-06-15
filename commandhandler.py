@@ -108,6 +108,9 @@ class Handler():
                 self.parent.userlist[int(auser.userid)].chats.append(int(values[0]))
             except KeyError, AttributeError:
                 return 0
+        if not int(values[0]) in self.parent.userorder:
+            self.parent.userorder[int(values[0])] = []
+        self.parent.userorder[int(values[0])].append(auser.userid)
         if "__ClientJoin" in self.parent.notifications:
             try:
                 for acallback in self.parent.notifications["__ClientJoin"]:
@@ -148,7 +151,16 @@ class Handler():
     def clientLeave(self, values):
         if not len(values) == 2:
             return 0
-        if not int(values[1]) in self.parent.userlist:
+        chatid = int(values[0])
+        userid = int(values[1])
+        if chatid in self.parent.userorder:
+            for i in range(len(self.parent.userorder[chatid])):
+                if self.parent.userorder[chatid][i] == userid:
+                    self.parent.userorder[chatid].pop(i)
+                    break
+            if not len(self.parent.userorder[chatid]):
+                self.parent.userorder.pop(chatid)
+        if not userid in self.parent.userlist:
             self.logger.debug("No such user in userlist!")
         # handle the callback early so it can still get the userdata and cleanup after it
         if "__ClientLeave" in self.parent.notifications:

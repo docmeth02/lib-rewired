@@ -37,6 +37,7 @@ class client(threading.Thread):
         self.port = 0
         self.handler = commandhandler.Handler(self)
         self.userlist = {}
+        self.userorder = {}
         self.subscriptions = {}
         self.notifications = {}
         self.serverinfo = {}
@@ -477,6 +478,9 @@ class client(threading.Thread):
                 elif userid != self.id:
                     self.logger.error("Can't find user %s" % amsg.msg[1])
                     return 0
+            if not int(chatid) in self.userorder:
+                self.userorder[int(chatid)] = []
+            self.userorder[int(chatid)].append(int(auser.userid))
         return 1
 
     def loadIcon(self, filename):
