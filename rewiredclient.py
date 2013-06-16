@@ -285,7 +285,13 @@ class client(threading.Thread):
                         group[int(amsg.id)] = amsg
                     elif amsg.type == endtype:
                         self.updateQueue(id)
-                        return group
+                        if group:
+                            keys = sorted(group, key=group.get)
+                            ordered = []
+                            for akey in keys:
+                                ordered.append(group[akey])
+                            return ordered
+                        return []
             sleep(0.1)
             count += 0.1
         self.logger.debug("EXITING Without Group Termination EVENT")
@@ -465,7 +471,7 @@ class client(threading.Thread):
         group = self.getMsgGroup(310, 311)
         if not group:
             return 0
-        for id, amsg in group.items():
+        for amsg in group:
             if int(chatid) == 1:  # public chat adds users to the global userlist
                 auser = types.user()
                 auser.initFromDict(amsg.msg)
@@ -480,7 +486,8 @@ class client(threading.Thread):
                     return 0
             if not int(chatid) in self.userorder:
                 self.userorder[int(chatid)] = []
-            self.userorder[int(chatid)].append(int(auser.userid))
+            with self.lock:
+                self.userorder[int(chatid)].append(int(auser.userid))
         return 1
 
     def loadIcon(self, filename):
@@ -826,7 +833,7 @@ class client(threading.Thread):
         if not data:
             self.logger.info("search: No results for %s", query)
             return 0
-        for akey, amsg in data.items():
+        for amsg in data:
             result.append(wiredfile(self, amsg.msg))
         return result
 
@@ -843,7 +850,7 @@ class client(threading.Thread):
                 self.logger.error("listDirectory: server returned error: %s for dir %s", error, path)
             return 0
         filelist = []
-        for akey, amsg in data.items():
+        for amsg in data:
             filelist.append(wiredfile(self, amsg.msg))
         return filelist
 

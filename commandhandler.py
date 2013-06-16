@@ -117,7 +117,8 @@ class Handler():
                 return 0
         if not int(values[0]) in self.parent.userorder:
             self.parent.userorder[int(values[0])] = []
-        self.parent.userorder[int(values[0])].append(auser.userid)
+        with self.parent.lock:
+            self.parent.userorder[int(values[0])].append(auser.userid)
         if "__ClientJoin" in self.parent.notifications:
             try:
                 for acallback in self.parent.notifications["__ClientJoin"]:

@@ -298,10 +298,10 @@ class accountlist():
         else:
             self.logger.error("loadGroup: Timeout waiting for response")
             return 0
-        return  self.groups[account]
+        return self.groups[account]
 
     def updateUsers(self, userlist):
-        for key, auser in userlist.items():
+        for auser in userlist:
             try:
                 auser = auser.msg[0]
                 if not auser in self.users:
@@ -312,7 +312,7 @@ class accountlist():
         return 1
 
     def updateGroups(self, grouplist):
-        for key, agroup in grouplist.items():
+        for agroup in grouplist:
             try:
                 agroup = agroup.msg[0]
                 if not agroup in self.groups:
