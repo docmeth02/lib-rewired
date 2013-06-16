@@ -91,6 +91,13 @@ class Handler():
             self.logger.debug("Invalid field count for 341 Chat Topic")
             return 0
         self.logger.debug("Topic for chat " + str(values[0]) + ": " + str(values[5]))
+        if "__ChatTopic" in self.parent.notifications:
+            try:
+                for acallback in self.parent.notifications["__ChatTopic"]:
+                    acallback([int(values[0]), self.parent.topics[int(values[0])]])
+            except:
+                self.logger.debug("Error in callback for __ChatTopic")
+                return 0
         return 1
 
     def clientJoin(self, values):
