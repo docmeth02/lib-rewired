@@ -84,11 +84,20 @@ class client(threading.Thread):
                         else:
                             sleep(0.1)
             else:  # socket is not connected
+                self.connected = 0  # make sure this gets set when being kicked or connection just dropped
                 self.logger.debug("not connected")
 
-                if "__ConnectionLost" in self.notifications:
-                    for acallback in self.notifications["__ConnectionLost"]:
-                        acallback()
+                if self.loggedin and not self.connected:
+                    msg = self.getMsg(306, 1)  # maybe we got kicked or banned?
+                    if msg:
+                            self.handler.clientKicked(msg.msg)
+
+                    if "__ConnectionLost" in self.notifications:  # notify parent about being disconnected
+                        for acallback in self.notifications["__ConnectionLost"]:
+                            try:
+                                acallback()
+                            except:
+                                pass
 
                 if self.loggedin and not self.autoreconnect:
                     self.keepalive = 0
