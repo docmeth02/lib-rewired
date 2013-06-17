@@ -419,6 +419,13 @@ class client(threading.Thread):
         self.getUserList(chatid)
         return 1
 
+    def declinePrivateChat(self, chatid):
+        if not self.connected or not self.loggedin:
+            self.logger.debug("declinePrivateChat: not connected or logged in properly")
+            return 0
+        self.socketthread.send("DECLINE " + str(chatid))
+        return 1
+
     def leaveChat(self, chatid):
         chatid = int(chatid)
         if not self.connected or not self.loggedin:
@@ -429,6 +436,8 @@ class client(threading.Thread):
             return 0
         self.socketthread.send("LEAVE " + str(chatid))
         self.activeChats.remove(chatid)
+        if chatid in self.userorder:
+            self.userorder.pop(chatid)
         if chatid in self.topics:
             self.logger.debug("releasing topic for chat %s", chatid)
             try:
