@@ -88,9 +88,12 @@ class client(threading.Thread):
                 self.logger.debug("not connected")
 
                 if self.loggedin and not self.connected:
-                    msg = self.getMsg(306, 1)  # maybe we got kicked or banned?
+                    msg = self.checkErrorMsg([306, 307], 1, True)  # maybe we got kicked or banned?
                     if msg:
+                        if msg.type == 306:
                             self.handler.clientKicked(msg.msg)
+                        elif msg.type == 307:
+                            self.handler.clientBanned(msg.msg)
 
                     if "__ConnectionLost" in self.notifications:  # notify parent about being disconnected
                         for acallback in self.notifications["__ConnectionLost"]:
@@ -314,7 +317,7 @@ class client(threading.Thread):
         self.logger.debug("EXITING Without Group Termination EVENT")
         return 0
 
-    def checkErrorMsg(self, msgtypes, timeout=1):
+    def checkErrorMsg(self, msgtypes, timeout=1, returnmsg=False):
         # since this blocks execution and we actually don't expect to receive an error the default timeout is low
         self.logger.debug("checkErrorMsg: timeout is: %s", timeout)
         if type(msgtypes) is not list:
@@ -329,6 +332,8 @@ class client(threading.Thread):
                     if amsg.type in msgtypes:
                         self.updateQueue(id)
                         self.logger.debug("checkErrorMsg: received error %s after %s seconds", amsg.type, count)
+                        if returnmsg:
+                            return amsg
                         return amsg.type
             count += 0.1
             sleep(0.1)
