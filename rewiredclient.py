@@ -471,11 +471,15 @@ class client(threading.Thread):
         group = self.getMsgGroup(310, 311)
         if not group:
             return 0
+        if not int(chatid) in self.userorder:
+                self.userorder[int(chatid)] = []
         for amsg in group:
             if int(chatid) == 1:  # public chat adds users to the global userlist
                 auser = types.user()
                 auser.initFromDict(amsg.msg)
                 self.userlist[auser.userid] = auser
+                with self.lock:
+                    self.userorder[int(chatid)].append(int(auser.userid))
             else:
                 userid = int(amsg.msg[1])
                 if userid in self.userlist and userid != self.id:
@@ -484,10 +488,8 @@ class client(threading.Thread):
                 elif userid != self.id:
                     self.logger.error("Can't find user %s" % amsg.msg[1])
                     return 0
-            if not int(chatid) in self.userorder:
-                self.userorder[int(chatid)] = []
-            with self.lock:
-                self.userorder[int(chatid)].append(int(auser.userid))
+                with self.lock:
+                    self.userorder[int(chatid)].append(userid)
         return 1
 
     def loadIcon(self, filename):

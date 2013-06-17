@@ -206,7 +206,7 @@ class Handler():
                 for acallback in self.parent.notifications["__PrivateMessage"]:
                     acallback(int(values[0]), str(values[1]))
             except:
-                self.logger.debug("Error in callback for __PrivateChatInvite")
+                self.logger.debug("Error in callback for __PrivateMessage")
                 return 0
         return 1
 
