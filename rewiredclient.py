@@ -85,6 +85,11 @@ class client(threading.Thread):
                             sleep(0.1)
             else:  # socket is not connected
                 self.logger.debug("not connected")
+
+                if "__ConnectionLost" in self.notifications:
+                    for acallback in self.notifications["__ConnectionLost"]:
+                        acallback()
+
                 if self.loggedin and not self.autoreconnect:
                     self.keepalive = 0
                     break
@@ -96,6 +101,9 @@ class client(threading.Thread):
                             self.reconnect()
                             if self.loggedin:
                                 self.logger.debug("Reconnected successfully")
+                                if "__Reconnected" in self.notifications:
+                                    for acallback in self.notifications["__Reconnected"]:
+                                        acallback()
                                 break
                             else:
                                 self.logger.debug("Reconnect failed")
