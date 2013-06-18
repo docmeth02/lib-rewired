@@ -181,6 +181,7 @@ class client(threading.Thread):
                 return 0
         self.userlist = {}
         self.topics = {}
+        self.userorder = {}
         if not self.login(self.nick, self.username, self.password):
             return 0
         return 1
