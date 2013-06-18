@@ -500,11 +500,11 @@ class client(threading.Thread):
         if not chatid in self.activeChats:
             return 0
         self.socketthread.send("WHO " + str(chatid))
-        group = self.getMsgGroup(310, 311)
+        group = self.getMsgGroup(310, 311, 30)
+        if not int(chatid) in self.userorder:
+            self.userorder[int(chatid)] = []
         if not group:
             return 0
-        if not int(chatid) in self.userorder:
-                self.userorder[int(chatid)] = []
         for amsg in group:
             if int(chatid) == 1:  # public chat adds users to the global userlist
                 auser = types.user()
@@ -522,6 +522,13 @@ class client(threading.Thread):
                     return 0
                 with self.lock:
                     self.userorder[int(chatid)].append(userid)
+        if "__UserListDone" in self.notifications:
+            try:
+                for acallback in self.notifications["__UserListDone"]:
+                    acallback([int(chatid)])
+            except:
+                self.logger.debug("Error in callback for __UserListDone")
+                return 0
         return 1
 
     def loadIcon(self, filename):
