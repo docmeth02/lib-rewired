@@ -42,6 +42,9 @@ class Handler():
         elif type == 331:                       # Private Chat Invitiation
             self.privateChatInvite(values)
             return 1
+        elif type == 332:                       # Private Chat Declined
+            self.privateChatDeclined(values)
+            return 1
         elif type == 341:                       # Chat Topic
             self.gotChatTopic(values)
             return 1
@@ -222,6 +225,17 @@ class Handler():
         else:
             if self.parent.autojoinprivatec:
                 self.parent.joinPrivateChat(values[0])
+        return 1
+
+    def privateChatDeclined(self, values):
+        self.logger.debug("Got 332 decline for chat %s from user %s", values[0], values[1])
+        if "__PrivateChatDecline" in self.parent.notifications:
+            try:
+                for acallback in self.parent.notifications["__PrivateChatDecline"]:
+                    acallback(int(values[0]), int(values[1]))
+            except:
+                self.logger.debug("Error in callback for __PrivateChatDecline")
+                return 0
         return 1
 
     def statusChange(self, values):
