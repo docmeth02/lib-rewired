@@ -55,6 +55,9 @@ class client(threading.Thread):
 
         self.transfers = {}
 
+        self.news = []
+        self.newsdone = 0
+
         self.autoreconnect = 1
         self.autojoinprivatec = 1
         self.maxTransfers = 1
@@ -649,6 +652,21 @@ class client(threading.Thread):
             self.logger.info("Not allowed to post news")
         if self.socketthread.send('POST %s' % news):
                 return 1
+        return 0
+
+    def getNews(self):
+        if self.socketthread.send('NEWS'):
+                return 1
+        return 0
+
+    def clearNews(self):
+        if not self.privileges['clearNews']:
+            self.logger.info("Not allowed to clear news")
+        if self.socketthread.send("CLEARNEWS"):
+            self.news = []
+            self.newsdone = 0
+            self.getNews()
+            return 1
         return 0
 
     def kickUser(self, id, msg=""):

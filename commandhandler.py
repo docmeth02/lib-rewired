@@ -39,6 +39,15 @@ class Handler():
         elif type == 307:                       # Client Banned
             self.clientBanned(values)
             return 1
+        elif type == 320:                       # News Item
+            self.newsItem(values)
+            return 1
+        elif type == 321:                       # News Done
+            self.newsDone(values)
+            return 1
+        elif type == 322:                       # News Posted
+            self.newsPosted(values)
+            return 1
         elif type == 331:                       # Private Chat Invitiation
             self.privateChatInvite(values)
             return 1
@@ -158,6 +167,43 @@ class Handler():
                 pass
         self.clientLeave([1, values[0]])
         return 1
+
+    def newsItem(self, values):
+        if not len(values) == 3:
+            return 0
+        anews = types.newsItem(values[0], values[1], values[2])
+        self.parent.news.append(anews)
+        return 1
+
+    def newsDone(self, values):
+        try:
+            if values[0] != "Done":
+                return 0
+        except Exception as e:
+            return 0
+        self.parent.newsdone = 1
+        if "__NewsDone" in self.parent.notifications:
+            try:
+                for acallback in self.parent.notifications["__NewsDone"]:
+                    acallback()
+            except:
+                self.logger.debug("Error in callback for __NewsDone")
+                pass
+        return 0
+
+    def newsPosted(self, values):
+        if not len(values) == 3:
+            return 0
+        anews = types.newsItem(values[0], values[1], values[2])
+        self.parent.news.insert(0, anews)
+        if "__NewsPosted" in self.parent.notifications:
+            try:
+                for acallback in self.parent.notifications["__NewsPosted"]:
+                    acallback(self.parent.news[0])
+            except:
+                self.logger.debug("Error in callback for __NewsPosted")
+                pass
+        return 0
 
     def clientLeave(self, values):
         if not len(values) == 2:

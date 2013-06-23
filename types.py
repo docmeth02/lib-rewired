@@ -1,4 +1,5 @@
-from time import time
+from time import time, altzone, timezone, mktime, daylight
+from datetime import datetime, timedelta
 
 
 class wiredMessages:
@@ -21,9 +22,9 @@ class wiredMessages:
             309: True,
             310: False,  # userlist item
             311: False,  # userlist done
-            320: True,
-            321: True,
-            322: True,
+            320: True,  # News Item
+            321: True,  # News Done
+            322: True,  # News Posted
             330: False,  # private chat created
             331: True,
             332: True,
@@ -343,3 +344,24 @@ class groupaccount():
         self.lastupdated = 0
         if privs:
             pass
+
+
+class newsItem():
+    def __init__(self, nick, date, post):
+        self.nick = nick
+        self.date = wiredTimeToTimestamp(date)
+        self.post = post
+
+
+def wiredTimeToTimestamp(timestring):
+    if daylight:  # use offset including DST
+        offset = altzone
+    else:
+        offset = timezone
+    try:
+        parsed = datetime.strptime(timestring[:-6], '%Y-%m-%dT%H:%M:%S')
+        parsed += timedelta(hours=int(timestring[-5:-3]), minutes=int(timestring[-2:]))*int(timestring[-6:-5]+'1')
+        parsed += timedelta(seconds=offset)
+    except ValueError:
+        return 0
+    return mktime(parsed.timetuple())
