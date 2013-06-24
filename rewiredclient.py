@@ -907,7 +907,7 @@ class client(threading.Thread):
             error = self.checkErrorMsg([520])
             if error:
                 self.logger.error("listDirectory: server returned error: %s for dir %s", error, path)
-            return 0
+                return 0
         filelist = []
         for amsg in data:
             filelist.append(wiredfile(self, amsg.msg))
