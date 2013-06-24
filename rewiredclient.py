@@ -903,11 +903,11 @@ class client(threading.Thread):
         if not self.socketthread.send(msg):
             self.logger.error("listDirectory: failed to send message")
         data = self.getMsgGroup(410, 411, 10)
-        if not data:
+        if not type(data) is list:
             error = self.checkErrorMsg([520])
             if error:
                 self.logger.error("listDirectory: server returned error: %s for dir %s", error, path)
-                return 0
+            return 0
         filelist = []
         for amsg in data:
             filelist.append(wiredfile(self, amsg.msg))
