@@ -940,6 +940,16 @@ class client(threading.Thread):
             return 0
         return 1
 
+    def move(self, oldpath, newpath):
+        if not self.privileges['alterFiles']:
+            self.logger.error("move: Not allowed to create delete files")
+            return 0
+        target = wiredfile(self)
+        target.path = oldpath
+        if not target.move(newpath):
+            return 0
+        return target
+
     def download(self, lpath, rpath):
         downloader = wiredtransfer(self, lpath, rpath)
         downloader.initDownload()

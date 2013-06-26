@@ -78,6 +78,23 @@ class wiredfile():
             return 0
         return 1
 
+    def move(self, newpath):
+        if not self.parent.privileges['alterFiles']:
+            self.logger.error('Not allowed to move files or folders!')
+            return 0
+        msg = "MOVE " + str(self.path) + chr(28) + str(newpath)
+        if not self.parent.socketthread.send(msg):
+            self.logger.error("move: failed to send reqeuest")
+            return 0
+        error = self.parent.checkErrorMsg([516, 520, 521])
+        if error:
+            self.logger.error("move: server returned error: %s on %s", error, self.path)
+            return 0
+        self.path = newpath
+        if not self.stat():
+            return 0
+        return 1
+
     def changeType(self, newType=False):
         if not self.path:
             self.logger.error("changeType: no path supplied")
