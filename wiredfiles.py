@@ -232,7 +232,10 @@ class wiredtransfer():
 
         else:
             localpath = path.join(self.localtarget, path.basename(rpath.path))
-            rpath.queuedownload(localpath)
+            rpath.transferParenthook(self)
+            with self.lock:
+                if rpath.queuedownload(localpath):
+                    self.addQueued(rpath.path, rpath.size, 0)
         return 1
 
     def initUpload(self):
@@ -275,8 +278,9 @@ class wiredtransfer():
             file.size = os.stat(self.localpath).st_size
             file.path = path.join(self.remotepath, path.basename(self.localpath))
             file.transferParenthook(self)
-            if file.queueupload(self.localpath):
-                self.addQueued(file.path, file.size, 0)
+            with self.lock:
+                if file.queueupload(self.localpath):
+                    self.addQueued(file.path, file.size, 0)
         return 1
 
     def createLocalPath(self):
@@ -351,7 +355,7 @@ class wiredtransfer():
 
 
 class transferObject(threading.Thread):
-    def __init__(self, parent, size, trtype, lpath, rpath, offset, transfermonitor=0):
+    def __init__(self, parent, size, trtype, lpath, rpath, offset, transfermonitor):
         threading.Thread.__init__(self)
         self.parent = parent
         self.transfermonitor = transfermonitor
