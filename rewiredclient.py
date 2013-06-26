@@ -913,16 +913,19 @@ class client(threading.Thread):
             filelist.append(wiredfile(self, amsg.msg))
         return filelist
 
-    def createFolder(self, path):
+    def createFolder(self, path, foldertype=1):
         # check path in upload folder here
         if not self.privileges['createFolders']:
             self.logger.error("createFolder: Not allowed to create new folders")
             return 0
         folder = wiredfile(self)
-        folder.type = 1
+        folder.type = foldertype
         folder.path = path
         if not folder.create():
             return 0
+        if folder.type > 1:
+            if not folder.changeType(foldertype):
+                return 0
         if not folder.stat():
             return 0
         return folder
