@@ -930,6 +930,16 @@ class client(threading.Thread):
             return 0
         return folder
 
+    def delete(self, path):
+        if not self.privileges['deleteFiles']:
+            self.logger.error("delete: Not allowed to create delete files")
+            return 0
+        target = wiredfile(self)
+        target.path = path
+        if not target.delete():
+            return 0
+        return 1
+
     def download(self, lpath, rpath):
         downloader = wiredtransfer(self, lpath, rpath)
         downloader.initDownload()
