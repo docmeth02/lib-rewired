@@ -950,6 +950,37 @@ class client(threading.Thread):
             return 0
         return target
 
+    def stat(self, rpath):
+        target = wiredfile(self)
+        target.path = rpath
+        if target.stat():
+            return target
+        return 0
+
+    def changeType(self, path, foldertype):
+        # check path in upload folder here
+        if not self.privileges['alterFiles']:
+            self.logger.error("changeType: Not allowed to alter folders")
+            return 0
+        folder = wiredfile(self)
+        folder.type = int(foldertype)
+        folder.path = path
+        if not folder.changeType(foldertype):
+                return 0
+        return folder
+
+    def changeComment(self, path, newcomment):
+        # check path in upload folder here
+        if not self.privileges['alterFiles']:
+            self.logger.error("changeComment: Not allowed to alter comments")
+            return 0
+        obj = wiredfile(self)
+        obj.comment = newcomment
+        obj.path = path
+        if not obj.changeComment():
+                return 0
+        return obj
+
     def download(self, lpath, rpath):
         downloader = wiredtransfer(self, lpath, rpath)
         downloader.initDownload()
