@@ -379,15 +379,19 @@ class client(threading.Thread):
     def sendChatImage(self, chatid, text, image):
         # expects %image% inside of text and replaces every occurrence with ssWired formatted image data
         # expects image to be type dict: {'type': 'png/jpg/gif', 'data': binaryimagedata }
+        # to wrap a image url instead of sending the imagedata pass type:url data:yoururl
         if not self.connected or not self.loggedin:
             self.logger.debug("sendChatImage: not connected or logged in properly")
             return 0
         if not chatid in self.activeChats:
             self.logger.debug("sendChatImage: not in chat %s", chatid)
             return 0
-        #if chatid == 1:
-            #self.logger.debug("sendChatImage: Not allowed to send image to public chat")
-            #return 0
+        if image['type'] is 'url':
+            if not self.socketthread.send("SAY " + str(chatid) + chr(28) + chr(128)
+                                          + '[img]%s[/img]' % image['data']):
+                self.logger.error("sendChatImage: Failed to send msg to server")
+                return 0
+            return 1
         data = self.insertImageData(text, image)
         try:
             data = data.encode("UTF-8")
@@ -405,7 +409,7 @@ class client(threading.Thread):
             self.logger.debug("insertImageData: invalid image data")
             return 0
         data = b64encode(image['data'])
-        imagestring = chr(3) + "data:image/" + str(image['type'].lower()) + ";base64," + str(data) + chr(3)
+        imagestring = '[img]data:image/' + str(image['type'].lower()) + ";base64," + str(data) + '[/img]'
         return text.replace('%image%', imagestring)
 
     def startPrivateChat(self):
