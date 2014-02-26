@@ -362,7 +362,7 @@ class client(threading.Thread):
             return 0
         return 1
 
-    def sendChat(self, chatid, text, action=0):
+    def sendChat(self, chatid, text, action=0, zankaonly=0):
         if not self.connected or not self.loggedin:
             self.logger.debug("sendChat: not connected or logged in properly")
             return 0
@@ -372,6 +372,8 @@ class client(threading.Thread):
         command = "SAY "
         if action:
             command = "ME "
+        if zankaonly:
+            text = "%s %s" % (chr(14), text)
         if not self.socketthread.send(command + str(chatid) + chr(28) + text):
             return 0
         return 1
