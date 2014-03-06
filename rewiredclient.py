@@ -362,7 +362,7 @@ class client(threading.Thread):
             return 0
         return 1
 
-    def sendChat(self, chatid, text, action=0, zankaonly=0):
+    def sendChat(self, chatid, text, action=0, legacyonly=0):
         if not self.connected or not self.loggedin:
             self.logger.debug("sendChat: not connected or logged in properly")
             return 0
@@ -372,16 +372,17 @@ class client(threading.Thread):
         command = "SAY "
         if action:
             command = "ME "
-        if zankaonly:
+        if legacyonly:
             text = "%s %s" % (chr(14), text)
         if not self.socketthread.send(command + str(chatid) + chr(28) + text):
             return 0
         return 1
 
-    def sendChatImage(self, chatid, text, image):
+    def sendChatImage(self, chatid, text, image, sendlegacy=True):
         # expects %image% inside of text and replaces every occurrence with ssWired formatted image data
         # expects image to be type dict: {'type': 'png/jpg/gif', 'data': binaryimagedata }
         # to wrap a image url instead of sending the imagedata pass type:url data:yoururl
+        # sendlegacy will send an additional line containing the image url (when type ==url) but hidden to ssWired Users
         if not self.connected or not self.loggedin:
             self.logger.debug("sendChatImage: not connected or logged in properly")
             return 0
@@ -389,10 +390,12 @@ class client(threading.Thread):
             self.logger.debug("sendChatImage: not in chat %s", chatid)
             return 0
         if image['type'] is 'url':
-            if not self.socketthread.send("SAY " + str(chatid) + chr(28) + chr(128)
-                                          + '[img]%s[/img]' % image['data']):
+            if not self.sendChat(chatid, '%s[[img]]%s[[/img]]' % (chr(128), image['data'])):
                 self.logger.error("sendChatImage: Failed to send msg to server")
                 return 0
+            if sendlegacy:
+                self.sendChat(chatid, '%s (Get http://shaosean.tk/ssWired/ for inline images)'
+                              % image['data'], legacyonly=1)
             return 1
         data = self.insertImageData(text, image)
         try:
@@ -400,7 +403,7 @@ class client(threading.Thread):
         except:
             pass
         if data:
-            if not self.socketthread.send("SAY " + str(chatid) + chr(28) + chr(128) + data):
+            if not self.sendChat(chatid, chr(128) + data):
                 self.logger.error("sendChatImage: Failed to send msg to server")
                 return 0
             return 1
@@ -411,7 +414,7 @@ class client(threading.Thread):
             self.logger.debug("insertImageData: invalid image data")
             return 0
         data = b64encode(image['data'])
-        imagestring = '[img]data:image/' + str(image['type'].lower()) + ";base64," + str(data) + '[/img]'
+        imagestring = '[[img]]data:image/' + str(image['type'].lower()) + ";base64," + str(data) + '[[/img]]'
         return text.replace('%image%', imagestring)
 
     def startPrivateChat(self):
