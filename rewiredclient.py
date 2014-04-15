@@ -79,7 +79,7 @@ class client(threading.Thread):
                             try:
                                 for asubscriber in self.subscriptions[int(amsg.type)]:
                                     asubscriber(amsg)  # call callback
-                            except '' as e:
+                            except Exception as e:
                                 self.logger.debug("callback for %s failed!", amsg.type)
                             self.updateQueue(id)
                             break
@@ -418,7 +418,7 @@ class client(threading.Thread):
             self.logger.debug("insertImageData: invalid image data")
             return 0
         data = b64encode(image['data'])
-        imagestring = '%s<img src="data:image/%s;base64,&s"/>' % (chr(128), image['type'].lower(), str(data))
+        imagestring = '%s<img src="data:image/%s;base64,%s"/>' % (chr(128), image['type'].lower(), str(data))
         return text.replace('%image%', imagestring)
 
     def startPrivateChat(self):
