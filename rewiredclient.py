@@ -72,6 +72,10 @@ class client(threading.Thread):
                 if self.socketthread.event.isSet():
                     for id, amsg in self.socketthread.queue.items():
                         if amsg.type in self.subscriptions:
+                            # skip ssWired html chat
+                            if ord(amsg.msg[2][:1]) >= 128:
+                                # maybe add callback in case something needs the html chat
+                                continue
                             try:
                                 for asubscriber in self.subscriptions[int(amsg.type)]:
                                     asubscriber(amsg)  # call callback
