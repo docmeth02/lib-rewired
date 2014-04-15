@@ -390,7 +390,7 @@ class client(threading.Thread):
             self.logger.debug("sendChatImage: not in chat %s", chatid)
             return 0
         if image['type'] is 'url':
-            if not self.sendChat(chatid, '%s[[img]]%s[[/img]]' % (chr(128), image['data'])):
+            if not self.sendChat(chatid, '%s<img src="%s"/>' % (chr(128), image['data'])):
                 self.logger.error("sendChatImage: Failed to send msg to server")
                 return 0
             if sendlegacy:
@@ -414,7 +414,7 @@ class client(threading.Thread):
             self.logger.debug("insertImageData: invalid image data")
             return 0
         data = b64encode(image['data'])
-        imagestring = '[[img]]data:image/' + str(image['type'].lower()) + ";base64," + str(data) + '[[/img]]'
+        imagestring = '%s<img src="data:image/%s;base64,&s"/>' % (chr(128), image['type'].lower(), str(data))
         return text.replace('%image%', imagestring)
 
     def startPrivateChat(self):
