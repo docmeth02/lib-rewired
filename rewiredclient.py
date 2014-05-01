@@ -8,7 +8,7 @@ from base64 import b64encode
 from socket import SHUT_RDWR
 from random import uniform
 from os.path import exists
-#from platform import platform
+from traceback import print_exc
 import platform
 from logging import getLogger
 import hashlib
@@ -80,7 +80,7 @@ class client(threading.Thread):
                                 for asubscriber in self.subscriptions[int(amsg.type)]:
                                     asubscriber(amsg)  # call callback
                             except Exception as e:
-                                self.logger.debug("callback for %s failed!", amsg.type)
+                                self.logger.debug("callback for %s failed: %s - %s" % (amsg.type, e, print_exc()))
                             self.updateQueue(id)
                             break
                         elif self.wiredmessages.askhandle(amsg.type):
@@ -418,7 +418,7 @@ class client(threading.Thread):
             self.logger.debug("insertImageData: invalid image data")
             return 0
         data = b64encode(image['data'])
-        imagestring = '%s<img src="data:image/%s;base64,%s"/>' % (chr(128), image['type'].lower(), str(data))
+        imagestring = '%s<img src="data:image/%s;base64,%s"/>' % (unichr(128), image['type'].lower(), data)
         return text.replace('%image%', imagestring)
 
     def startPrivateChat(self):
